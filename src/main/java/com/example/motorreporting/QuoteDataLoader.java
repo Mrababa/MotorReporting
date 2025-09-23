@@ -3,7 +3,6 @@ package com.example.motorreporting;
 import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
-import com.opencsv.exceptions.CsvValidationException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.Row;
@@ -175,38 +174,34 @@ public final class QuoteDataLoader {
              CSVReader csvReader = new CSVReaderBuilder(reader)
                      .withCSVParser(new CSVParserBuilder().withSeparator(',').build())
                      .build()) {
-            try {
-                String[] headers = csvReader.readNext();
-                if (headers == null) {
-                    return records;
+            String[] headers = csvReader.readNext();
+            if (headers == null) {
+                return records;
+            }
+            Map<Integer, String> headerIndex = new HashMap<>();
+            for (int i = 0; i < headers.length; i++) {
+                if (headers[i] != null && !headers[i].trim().isEmpty()) {
+                    String header = headers[i].trim();
+                    headerIndex.put(i, header);
                 }
-                Map<Integer, String> headerIndex = new HashMap<>();
-                for (int i = 0; i < headers.length; i++) {
-                    if (headers[i] != null && !headers[i].trim().isEmpty()) {
-                        String header = headers[i].trim();
-                        headerIndex.put(i, header);
-                    }
-                }
+            }
 
-                String[] row;
-                while ((row = csvReader.readNext()) != null) {
-                    if (isRowEmpty(row)) {
-                        continue;
-                    }
-                    Map<String, String> values = new HashMap<>();
-                    for (Map.Entry<Integer, String> entry : headerIndex.entrySet()) {
-                        int index = entry.getKey();
-                        String header = entry.getValue();
-                        String value = index < row.length && row[index] != null ? row[index].trim() : "";
-                        if (DateNormalizer.isDateColumn(header)) {
-                            value = DateNormalizer.normalize(value);
-                        }
-                        values.put(header, value);
-                    }
-                    records.add(QuoteRecord.fromValues(values));
+            String[] row;
+            while ((row = csvReader.readNext()) != null) {
+                if (isRowEmpty(row)) {
+                    continue;
                 }
-            } catch (CsvValidationException ex) {
-                throw new IOException("Unable to read CSV file: " + filePath, ex);
+                Map<String, String> values = new HashMap<>();
+                for (Map.Entry<Integer, String> entry : headerIndex.entrySet()) {
+                    int index = entry.getKey();
+                    String header = entry.getValue();
+                    String value = index < row.length && row[index] != null ? row[index].trim() : "";
+                    if (DateNormalizer.isDateColumn(header)) {
+                        value = DateNormalizer.normalize(value);
+                    }
+                    values.put(header, value);
+                }
+                records.add(QuoteRecord.fromValues(values));
             }
         } catch (RuntimeException ex) {
             throw new IOException("Unable to read CSV file: " + filePath, ex);
