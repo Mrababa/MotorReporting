@@ -294,24 +294,20 @@ public final class QuoteStatisticsCalculator {
         if (limit <= 0) {
             return List.of();
         }
-        Map<MakeModelKey, Set<String>> chassisByMakeModel = new HashMap<>();
+        Map<MakeModelKey, MakeModelChassisAccumulator> accumulatorByMakeModel = new HashMap<>();
         for (QuoteRecord record : records) {
             Optional<String> chassisOptional = record.getChassisNumber();
             if (chassisOptional.isEmpty()) {
                 continue;
             }
-            String make = record.getMakeLabel();
-            String model = record.getModelLabel();
-            MakeModelKey key = new MakeModelKey(make, model);
-            Set<String> chassis = chassisByMakeModel.computeIfAbsent(key, ignored -> new LinkedHashSet<>());
-            chassis.add(chassisOptional.get());
+            MakeModelKey key = new MakeModelKey(record.getMakeLabel(), record.getModelLabel());
+            MakeModelChassisAccumulator accumulator =
+                    accumulatorByMakeModel.computeIfAbsent(key, ignored -> new MakeModelChassisAccumulator());
+            accumulator.record(chassisOptional.get(), record.isSuccessful(), record.isFailure());
         }
 
-        List<QuoteStatistics.MakeModelChassisSummary> results = chassisByMakeModel.entrySet().stream()
-                .map(entry -> new QuoteStatistics.MakeModelChassisSummary(
-                        entry.getKey().make,
-                        entry.getKey().model,
-                        entry.getValue().size()))
+        List<QuoteStatistics.MakeModelChassisSummary> results = accumulatorByMakeModel.entrySet().stream()
+                .map(entry -> entry.getValue().toSummary(entry.getKey()))
                 .sorted(Comparator
                         .comparingLong(QuoteStatistics.MakeModelChassisSummary::getUniqueChassisCount)
                         .reversed()
@@ -526,6 +522,59 @@ public final class QuoteStatisticsCalculator {
         }
     }
 
+    private static final class MakeModelChassisAccumulator {
+        private final Map<String, ChassisOutcome> outcomesByChassis = new HashMap<>();
+
+        private void record(String chassis, boolean success, boolean failure) {
+            ChassisOutcome outcome = outcomesByChassis.computeIfAbsent(chassis, key -> new ChassisOutcome());
+            if (success) {
+                outcome.markSuccess();
+            }
+            if (failure) {
+                outcome.markFailure();
+            }
+        }
+
+        private QuoteStatistics.MakeModelChassisSummary toSummary(MakeModelKey key) {
+            long successCount = 0;
+            long failureCount = 0;
+            for (ChassisOutcome outcome : outcomesByChassis.values()) {
+                if (outcome.hasSuccess()) {
+                    successCount++;
+                } else if (outcome.hasFailure()) {
+                    failureCount++;
+                }
+            }
+            return new QuoteStatistics.MakeModelChassisSummary(
+                    key.getMake(),
+                    key.getModel(),
+                    outcomesByChassis.size(),
+                    successCount,
+                    failureCount);
+        }
+
+        private static final class ChassisOutcome {
+            private boolean success;
+            private boolean failure;
+
+            private void markSuccess() {
+                success = true;
+            }
+
+            private void markFailure() {
+                failure = true;
+            }
+
+            private boolean hasSuccess() {
+                return success;
+            }
+
+            private boolean hasFailure() {
+                return failure;
+            }
+        }
+    }
+
     private static final class OutcomeAccumulator {
         private long success;
         private long failure;
@@ -566,6 +615,14 @@ public final class QuoteStatisticsCalculator {
         private MakeModelKey(String make, String model) {
             this.make = make;
             this.model = model;
+        }
+
+        private String getMake() {
+            return make;
+        }
+
+        private String getModel() {
+            return model;
         }
 
         @Override

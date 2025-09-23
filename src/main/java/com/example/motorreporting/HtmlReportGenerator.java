@@ -810,6 +810,8 @@ public class HtmlReportGenerator {
         html.append("            <th scope=\"col\">Make</th>\n");
         html.append("            <th scope=\"col\">Model</th>\n");
         html.append("            <th scope=\"col\" class=\"numeric\">Unique Chassis Count</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Success Ratio</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Failure Ratio</th>\n");
         html.append("          </tr>\n");
         html.append("        </thead>\n");
         html.append("        <tbody>\n");
@@ -823,6 +825,16 @@ public class HtmlReportGenerator {
                     .append("</td>\n");
             html.append("            <td class=\"numeric\">")
                     .append(escapeHtml(formatInteger(summary.getUniqueChassisCount())))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatPercentage(
+                            summary.getSuccessfulUniqueChassisCount(),
+                            summary.getUniqueChassisCount())))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatPercentage(
+                            summary.getFailedUniqueChassisCount(),
+                            summary.getUniqueChassisCount())))
                     .append("</td>\n");
             html.append("          </tr>\n");
         }
