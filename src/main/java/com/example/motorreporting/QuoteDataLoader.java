@@ -47,7 +47,7 @@ public final class QuoteDataLoader {
         try (InputStream inputStream = Files.newInputStream(filePath);
              Workbook workbook = WorkbookFactory.create(inputStream)) {
             DataFormatter formatter = new DataFormatter();
-            Sheet sheet = workbook.getSheetAt(0);
+            Sheet sheet = selectRelevantSheet(workbook);
             if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) {
                 return records;
             }
@@ -72,6 +72,38 @@ public final class QuoteDataLoader {
             throw new IOException("Unable to read Excel file: " + filePath, ex);
         }
         return records;
+    }
+
+    private static Sheet selectRelevantSheet(Workbook workbook) {
+        if (workbook == null || workbook.getNumberOfSheets() == 0) {
+            return null;
+        }
+
+        List<String> preferredNames = List.of("Source", "Soure", "Source Data");
+        for (String name : preferredNames) {
+            Sheet sheet = getSheetIgnoreCase(workbook, name);
+            if (sheet != null) {
+                return sheet;
+            }
+        }
+
+        return workbook.getSheetAt(0);
+    }
+
+    private static Sheet getSheetIgnoreCase(Workbook workbook, String sheetName) {
+        if (sheetName == null) {
+            return null;
+        }
+        for (int i = 0; i < workbook.getNumberOfSheets(); i++) {
+            Sheet candidate = workbook.getSheetAt(i);
+            if (candidate != null) {
+                String currentName = candidate.getSheetName();
+                if (currentName != null && currentName.trim().equalsIgnoreCase(sheetName)) {
+                    return candidate;
+                }
+            }
+        }
+        return null;
     }
 
     private static Map<Integer, String> extractHeaders(Row headerRow, DataFormatter formatter) {

@@ -4,11 +4,12 @@ Generate an executive HTML dashboard for insurance quote attempts. The applicati
 ingests either an Excel (`.xlsx`/`.xls`) or CSV file with the following columns:
 
 ```
-QuoteRequestedOn, Status, ReferenceNumber, InsurancePurpose, ICName,
-ShoryMakeEn, ShoryModelEn, OverrideIsGccSpec, Age, LicenseIssueDate,
-BodyCategory, ChassisNumber, InsuranceType, ManufactureYear,
-RegistrationDate, QuotationNo, EstimatedValue, InsuranceExpiryDate,
-ErrorText
+QuoteRequestedOn, Status, ReferenceNumber, EmiratesId, InsurancePurpose,
+ICName, PolicyNumber, PolicyPremiumTaxable, ShoryMakeEn, ShoryModelEn,
+OverrideIsGccSpec, Age, LicenseIssueDate, BodyCategory, ChassisNumber,
+InsuranceType, CurrentInsurranceType, CurrentInsurranceExpiry,
+CurrentInsurranceStatus, ManufactureYear, RegistrationDate, QuotationNo,
+EstimatedValue, InsuranceExpiryDate, ErrorText
 ```
 
 The report splits the data into Third Party Liability (TPL) and Comprehensive (Comp)
