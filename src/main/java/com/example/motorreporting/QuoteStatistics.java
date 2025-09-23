@@ -26,8 +26,13 @@ public class QuoteStatistics {
     private final long comprehensiveUniqueChassisFailCount;
     private final Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes;
     private final Map<String, OutcomeBreakdown> tplSpecificationOutcomes;
+    private final Map<String, OutcomeBreakdown> comprehensiveBodyCategoryOutcomes;
+    private final Map<String, OutcomeBreakdown> comprehensiveSpecificationOutcomes;
     private final List<AgeRangeStats> tplAgeRangeStats;
+    private final List<AgeRangeStats> comprehensiveAgeRangeStats;
+    private final List<ValueRangeStats> comprehensiveEstimatedValueStats;
     private final Map<String, Long> tplErrorCounts;
+    private final Map<String, Long> comprehensiveErrorCounts;
 
     public QuoteStatistics(QuoteGroupStats tplStats,
                            QuoteGroupStats comprehensiveStats,
@@ -40,8 +45,13 @@ public class QuoteStatistics {
                            long comprehensiveUniqueChassisFailCount,
                            Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes,
                            Map<String, OutcomeBreakdown> tplSpecificationOutcomes,
+                           Map<String, OutcomeBreakdown> comprehensiveBodyCategoryOutcomes,
+                           Map<String, OutcomeBreakdown> comprehensiveSpecificationOutcomes,
                            List<AgeRangeStats> tplAgeRangeStats,
-                           Map<String, Long> tplErrorCounts) {
+                           List<AgeRangeStats> comprehensiveAgeRangeStats,
+                           List<ValueRangeStats> comprehensiveEstimatedValueStats,
+                           Map<String, Long> tplErrorCounts,
+                           Map<String, Long> comprehensiveErrorCounts) {
         this.tplStats = Objects.requireNonNull(tplStats, "tplStats");
         this.comprehensiveStats = Objects.requireNonNull(comprehensiveStats, "comprehensiveStats");
         this.uniqueChassisCount = uniqueChassisCount;
@@ -53,8 +63,13 @@ public class QuoteStatistics {
         this.comprehensiveUniqueChassisFailCount = comprehensiveUniqueChassisFailCount;
         this.tplBodyCategoryOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplBodyCategoryOutcomes));
         this.tplSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplSpecificationOutcomes));
+        this.comprehensiveBodyCategoryOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveBodyCategoryOutcomes));
+        this.comprehensiveSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveSpecificationOutcomes));
         this.tplAgeRangeStats = List.copyOf(tplAgeRangeStats);
+        this.comprehensiveAgeRangeStats = List.copyOf(comprehensiveAgeRangeStats);
+        this.comprehensiveEstimatedValueStats = List.copyOf(comprehensiveEstimatedValueStats);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
+        this.comprehensiveErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveErrorCounts));
     }
 
     public QuoteGroupStats getTplStats() {
@@ -119,6 +134,26 @@ public class QuoteStatistics {
 
     public Map<String, Long> getTplErrorCounts() {
         return tplErrorCounts;
+    }
+
+    public Map<String, OutcomeBreakdown> getComprehensiveBodyCategoryOutcomes() {
+        return comprehensiveBodyCategoryOutcomes;
+    }
+
+    public Map<String, OutcomeBreakdown> getComprehensiveSpecificationOutcomes() {
+        return comprehensiveSpecificationOutcomes;
+    }
+
+    public List<AgeRangeStats> getComprehensiveAgeRangeStats() {
+        return comprehensiveAgeRangeStats;
+    }
+
+    public List<ValueRangeStats> getComprehensiveEstimatedValueStats() {
+        return comprehensiveEstimatedValueStats;
+    }
+
+    public Map<String, Long> getComprehensiveErrorCounts() {
+        return comprehensiveErrorCounts;
     }
 
     public long getOverallSkipCount() {
@@ -212,6 +247,50 @@ public class QuoteStatistics {
         private final long failureCount;
 
         public AgeRangeStats(String label, long successCount, long failureCount) {
+            this.label = Objects.requireNonNull(label, "label");
+            this.successCount = successCount;
+            this.failureCount = failureCount;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public long getSuccessCount() {
+            return successCount;
+        }
+
+        public long getFailureCount() {
+            return failureCount;
+        }
+
+        public long getProcessedTotal() {
+            return successCount + failureCount;
+        }
+
+        public double getSuccessRatio() {
+            long total = getProcessedTotal();
+            if (total == 0) {
+                return 0.0;
+            }
+            return (successCount * 100.0) / total;
+        }
+
+        public double getFailureRatio() {
+            long total = getProcessedTotal();
+            if (total == 0) {
+                return 0.0;
+            }
+            return (failureCount * 100.0) / total;
+        }
+    }
+
+    public static final class ValueRangeStats {
+        private final String label;
+        private final long successCount;
+        private final long failureCount;
+
+        public ValueRangeStats(String label, long successCount, long failureCount) {
             this.label = Objects.requireNonNull(label, "label");
             this.successCount = successCount;
             this.failureCount = failureCount;
