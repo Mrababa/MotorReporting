@@ -1,7 +1,7 @@
 # MotorReporting
 
-Generate a PDF summary for insurance quote attempts. The application ingests either an
-Excel (`.xlsx`/`.xls`) or CSV file with the following columns:
+Generate an executive HTML dashboard for insurance quote attempts. The application
+ingests either an Excel (`.xlsx`/`.xls`) or CSV file with the following columns:
 
 ```
 QuoteRequestedOn, Status, ReferenceNumber, InsurancePurpose, ICName,
@@ -13,7 +13,7 @@ ErrorText
 
 The report splits the data into Third Party Liability (TPL) and Comprehensive (Comp)
 quotes, calculates KPIs, highlights failure reasons, and renders multiple charts before
-exporting everything into a single PDF named `quote_generation_report.pdf`.
+exporting everything into a single self-contained HTML file named `quote_generation_report.html`.
 
 ## Prerequisites
 
@@ -32,7 +32,7 @@ mvn clean package
 java -jar target/motor-reporting-1.0-SNAPSHOT-jar-with-dependencies.jar /path/to/quotes.xlsx
 ```
 
-The PDF is created in the same directory as the input file. For CSV inputs simply point
+The HTML report is created in the same directory as the input file. For CSV inputs simply point
 the command at the `.csv` file.
 
 ### Running from an IDE
@@ -48,11 +48,12 @@ providing your own data.
 
 ## Output
 
-The PDF report includes:
+The HTML report includes:
 
-* Overall totals and failure percentages
-* Grouped statistics for TPL and Comprehensive quotes
-* Failure reason pie charts per group
-* Bar chart comparing failures by manufacture year
-* KPI summary chart
-* Recommendations based on the top failure reasons
+* A navigation bar linking to the overview, TPL, Comprehensive, and Failure sections
+* KPI cards with total quotes, pass/fail counts, fail percentage, and value lost
+* Quote distribution, failure reason, and manufacture year charts powered by Chart.js
+* Optional daily trend line when quote request dates are available
+* Interactive DataTables for failed quotes and error catalogues with search, filter, and export options
+
+> **Note:** The generated dashboard references Bootstrap 5, Chart.js, and DataTables assets via their CDNs.
