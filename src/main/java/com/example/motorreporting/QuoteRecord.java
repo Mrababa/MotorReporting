@@ -21,6 +21,7 @@ public class QuoteRecord {
     private final String quoteNumber;
     private final Integer manufactureYear;
     private final BigDecimal estimatedValue;
+    private final String chassisNumber;
     private final QuoteOutcome outcome;
 
     private QuoteRecord(Map<String, String> rawValues,
@@ -30,6 +31,7 @@ public class QuoteRecord {
                         Integer manufactureYear,
                         BigDecimal estimatedValue,
                         String quoteNumber,
+                        String chassisNumber,
                         QuoteOutcome outcome) {
         this.rawValues = Collections.unmodifiableMap(new HashMap<>(rawValues));
         this.insuranceType = insuranceType;
@@ -38,6 +40,7 @@ public class QuoteRecord {
         this.manufactureYear = manufactureYear;
         this.estimatedValue = estimatedValue;
         this.quoteNumber = quoteNumber;
+        this.chassisNumber = chassisNumber;
         this.outcome = Objects.requireNonNull(outcome, "outcome");
     }
 
@@ -63,9 +66,10 @@ public class QuoteRecord {
         Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
         String quoteNumber = extractQuoteNumber(normalized);
+        String chassisNumber = extractChassisNumber(normalized);
 
         return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue,
-                quoteNumber, outcome);
+                quoteNumber, chassisNumber, outcome);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
@@ -168,6 +172,45 @@ public class QuoteRecord {
         return null;
     }
 
+    private static String extractChassisNumber(Map<String, String> values) {
+        String[] possibleKeys = {
+                "ChassisNumber",
+                "ChassisNo",
+                "Chassis No",
+                "VehicleIdentificationNumber",
+                "VIN"
+        };
+        for (String key : possibleKeys) {
+            String value = getValueIgnoreCase(values, key);
+            String normalized = normalizeChassisNumber(value);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+        return null;
+    }
+
+    private static String normalizeChassisNumber(String value) {
+        if (isNullLiteral(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        StringBuilder cleaned = new StringBuilder(trimmed.length());
+        for (int i = 0; i < trimmed.length(); i++) {
+            char ch = trimmed.charAt(i);
+            if (!Character.isWhitespace(ch)) {
+                cleaned.append(ch);
+            }
+        }
+        if (cleaned.length() == 0) {
+            return null;
+        }
+        return cleaned.toString().toUpperCase(Locale.ROOT);
+    }
+
     private static Integer parseInteger(String value) {
         if (value == null || value.isBlank()) {
             return null;
@@ -224,6 +267,10 @@ public class QuoteRecord {
 
     public Optional<String> getQuoteNumber() {
         return Optional.ofNullable(quoteNumber);
+    }
+
+    public Optional<String> getChassisNumber() {
+        return Optional.ofNullable(chassisNumber);
     }
 
     public boolean hasQuoteNumber() {

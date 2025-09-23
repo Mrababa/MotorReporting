@@ -4,9 +4,11 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -29,7 +31,11 @@ public final class QuoteStatisticsCalculator {
 
         QuoteGroupStats tplStats = buildStats(GroupType.TPL, tplRecords);
         QuoteGroupStats compStats = buildStats(GroupType.COMPREHENSIVE, compRecords);
-        return new QuoteStatistics(tplStats, compStats);
+        UniqueChassisSummary uniqueChassisSummary = computeUniqueChassisSummary(records);
+        return new QuoteStatistics(tplStats, compStats,
+                uniqueChassisSummary.getTotal(),
+                uniqueChassisSummary.getSuccessCount(),
+                uniqueChassisSummary.getFailureCount());
     }
 
     private static QuoteGroupStats buildStats(GroupType groupType, List<QuoteRecord> records) {
@@ -80,6 +86,49 @@ public final class QuoteStatisticsCalculator {
             return Integer.parseInt(label);
         } catch (NumberFormatException ex) {
             return Integer.MAX_VALUE;
+        }
+    }
+
+    private static UniqueChassisSummary computeUniqueChassisSummary(List<QuoteRecord> records) {
+        Set<String> uniqueValues = new LinkedHashSet<>();
+        Set<String> successValues = new LinkedHashSet<>();
+        Set<String> failureValues = new LinkedHashSet<>();
+
+        for (QuoteRecord record : records) {
+            record.getChassisNumber().ifPresent(chassis -> {
+                uniqueValues.add(chassis);
+                if (record.isSuccessful()) {
+                    successValues.add(chassis);
+                } else if (record.isFailure()) {
+                    failureValues.add(chassis);
+                }
+            });
+        }
+
+        return new UniqueChassisSummary(uniqueValues.size(), successValues.size(), failureValues.size());
+    }
+
+    private static final class UniqueChassisSummary {
+        private final long total;
+        private final long successCount;
+        private final long failureCount;
+
+        private UniqueChassisSummary(long total, long successCount, long failureCount) {
+            this.total = total;
+            this.successCount = successCount;
+            this.failureCount = failureCount;
+        }
+
+        private long getTotal() {
+            return total;
+        }
+
+        private long getSuccessCount() {
+            return successCount;
+        }
+
+        private long getFailureCount() {
+            return failureCount;
         }
     }
 }
