@@ -31,6 +31,7 @@ public class QuoteStatistics {
     private final List<AgeRangeStats> tplAgeRangeStats;
     private final List<AgeRangeStats> comprehensiveAgeRangeStats;
     private final List<ValueRangeStats> comprehensiveEstimatedValueStats;
+    private final List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis;
     private final Map<String, Long> tplErrorCounts;
     private final Map<String, Long> comprehensiveErrorCounts;
 
@@ -50,6 +51,7 @@ public class QuoteStatistics {
                            List<AgeRangeStats> tplAgeRangeStats,
                            List<AgeRangeStats> comprehensiveAgeRangeStats,
                            List<ValueRangeStats> comprehensiveEstimatedValueStats,
+                           List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis,
                            Map<String, Long> tplErrorCounts,
                            Map<String, Long> comprehensiveErrorCounts) {
         this.tplStats = Objects.requireNonNull(tplStats, "tplStats");
@@ -68,6 +70,7 @@ public class QuoteStatistics {
         this.tplAgeRangeStats = List.copyOf(tplAgeRangeStats);
         this.comprehensiveAgeRangeStats = List.copyOf(comprehensiveAgeRangeStats);
         this.comprehensiveEstimatedValueStats = List.copyOf(comprehensiveEstimatedValueStats);
+        this.tplTopRejectedModelsByUniqueChassis = List.copyOf(tplTopRejectedModelsByUniqueChassis);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
         this.comprehensiveErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveErrorCounts));
     }
@@ -130,6 +133,10 @@ public class QuoteStatistics {
 
     public List<AgeRangeStats> getTplAgeRangeStats() {
         return tplAgeRangeStats;
+    }
+
+    public List<ModelChassisSummary> getTplTopRejectedModelsByUniqueChassis() {
+        return tplTopRejectedModelsByUniqueChassis;
     }
 
     public Map<String, Long> getTplErrorCounts() {
@@ -238,6 +245,24 @@ public class QuoteStatistics {
 
         public long getProcessedTotal() {
             return successCount + failureCount;
+        }
+    }
+
+    public static final class ModelChassisSummary {
+        private final String model;
+        private final long uniqueChassisCount;
+
+        public ModelChassisSummary(String model, long uniqueChassisCount) {
+            this.model = Objects.requireNonNull(model, "model");
+            this.uniqueChassisCount = uniqueChassisCount;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public long getUniqueChassisCount() {
+            return uniqueChassisCount;
         }
     }
 

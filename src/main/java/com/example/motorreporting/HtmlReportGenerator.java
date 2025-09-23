@@ -362,6 +362,8 @@ public class HtmlReportGenerator {
         html.append("        <canvas id=\"tplAgeRatioChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
+        appendModelChassisTable(html, "Top 10 Rejected Models (Unique Chassis)",
+                statistics.getTplTopRejectedModelsByUniqueChassis());
         appendErrorTable(html, "TPL Error Counts", statistics.getTplErrorCounts());
         html.append("  </section>\n");
         html.append("  <section id=\"comprehensive-analysis\" class=\"page-section\">\n");
@@ -594,6 +596,41 @@ public class HtmlReportGenerator {
                     .append("</td>\n");
             html.append("            <td class=\"numeric\">")
                     .append(escapeHtml(formatPercentage(success, total)))
+                    .append("</td>\n");
+            html.append("          </tr>\n");
+        }
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
+    private void appendModelChassisTable(StringBuilder html,
+                                          String heading,
+                                          List<QuoteStatistics.ModelChassisSummary> models) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        if (models.isEmpty()) {
+            html.append("      <p class=\"empty-state\">No rejected models recorded.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">Model</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Unique Chassis Count</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        for (QuoteStatistics.ModelChassisSummary summary : models) {
+            html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(summary.getModel()))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(summary.getUniqueChassisCount())))
                     .append("</td>\n");
             html.append("          </tr>\n");
         }

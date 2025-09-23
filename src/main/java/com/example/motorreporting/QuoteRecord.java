@@ -25,6 +25,7 @@ public class QuoteRecord {
     private final QuoteOutcome outcome;
     private final String bodyCategory;
     private final String overrideSpecification;
+    private final String model;
     private final Integer driverAge;
 
     private QuoteRecord(Map<String, String> rawValues,
@@ -38,7 +39,8 @@ public class QuoteRecord {
                         QuoteOutcome outcome,
                         String bodyCategory,
                         String overrideSpecification,
-                        Integer driverAge) {
+                        Integer driverAge,
+                        String model) {
         this.rawValues = Collections.unmodifiableMap(new HashMap<>(rawValues));
         this.insuranceType = insuranceType;
         this.status = status;
@@ -51,6 +53,7 @@ public class QuoteRecord {
         this.bodyCategory = bodyCategory;
         this.overrideSpecification = overrideSpecification;
         this.driverAge = driverAge;
+        this.model = model;
     }
 
     public static QuoteRecord fromValues(Map<String, String> values) {
@@ -79,9 +82,10 @@ public class QuoteRecord {
         String bodyCategory = normalizeCategoricalValue(getValueIgnoreCase(normalized, "BodyCategory"));
         String overrideSpec = normalizeCategoricalValue(getValueIgnoreCase(normalized, "OverrideIsGccSpec"));
         Integer driverAge = parseInteger(getValueIgnoreCase(normalized, "Age"));
+        String model = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ShoryModelEn"));
 
         return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue,
-                quoteNumber, chassisNumber, outcome, bodyCategory, overrideSpec, driverAge);
+                quoteNumber, chassisNumber, outcome, bodyCategory, overrideSpec, driverAge, model);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
@@ -330,6 +334,14 @@ public class QuoteRecord {
 
     public String getOverrideSpecificationLabel() {
         return labelOrUnknown(overrideSpecification);
+    }
+
+    public Optional<String> getModel() {
+        return Optional.ofNullable(model);
+    }
+
+    public String getModelLabel() {
+        return labelOrUnknown(model);
     }
 
     public Optional<Integer> getDriverAge() {
