@@ -43,28 +43,31 @@ public class PdfReportGenerator {
         Document document = new Document(PageSize.A4, 36, 36, 54, 36);
         try (OutputStream outputStream = Files.newOutputStream(outputPath)) {
             PdfWriter.getInstance(document, outputStream);
-            document.open();
 
-            addTitlePage(document);
-            addOverallSummary(document, statistics);
-            addSummaryChart(document, statistics);
-            addSpacing(document);
+            try {
+                document.open();
 
-            addGroupSection(document, statistics.getTplStats());
-            addSpacing(document);
-            addGroupSection(document, statistics.getComprehensiveStats());
-            addSpacing(document);
+                addTitlePage(document);
+                addOverallSummary(document, statistics);
+                addSummaryChart(document, statistics);
+                addSpacing(document);
 
-            addFailureByYearChart(document, statistics);
-            addSpacing(document);
+                addGroupSection(document, statistics.getTplStats());
+                addSpacing(document);
+                addGroupSection(document, statistics.getComprehensiveStats());
+                addSpacing(document);
 
-            addRecommendations(document, statistics);
+                addFailureByYearChart(document, statistics);
+                addSpacing(document);
+
+                addRecommendations(document, statistics);
+            } finally {
+                if (document.isOpen()) {
+                    document.close();
+                }
+            }
         } catch (DocumentException ex) {
             throw new IOException("Failed to build PDF report", ex);
-        } finally {
-            if (document.isOpen()) {
-                document.close();
-            }
         }
     }
 
