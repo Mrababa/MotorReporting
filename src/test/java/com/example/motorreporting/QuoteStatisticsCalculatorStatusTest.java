@@ -83,5 +83,9 @@ class QuoteStatisticsCalculatorStatusTest {
         assertEquals(3, statistics.getUniqueChassisCount());
         assertEquals(2, statistics.getUniqueChassisSuccessCount());
         assertEquals(2, statistics.getUniqueChassisFailCount());
+        assertEquals(1, statistics.getTplUniqueChassisSuccessCount());
+        assertEquals(1, statistics.getTplUniqueChassisFailCount());
+        assertEquals(1, statistics.getComprehensiveUniqueChassisSuccessCount());
+        assertEquals(1, statistics.getComprehensiveUniqueChassisFailCount());
     }
 }

@@ -32,10 +32,16 @@ public final class QuoteStatisticsCalculator {
         QuoteGroupStats tplStats = buildStats(GroupType.TPL, tplRecords);
         QuoteGroupStats compStats = buildStats(GroupType.COMPREHENSIVE, compRecords);
         UniqueChassisSummary uniqueChassisSummary = computeUniqueChassisSummary(records);
+        UniqueChassisSummary tplUniqueChassisSummary = computeUniqueChassisSummary(tplRecords);
+        UniqueChassisSummary compUniqueChassisSummary = computeUniqueChassisSummary(compRecords);
         return new QuoteStatistics(tplStats, compStats,
                 uniqueChassisSummary.getTotal(),
                 uniqueChassisSummary.getSuccessCount(),
-                uniqueChassisSummary.getFailureCount());
+                uniqueChassisSummary.getFailureCount(),
+                tplUniqueChassisSummary.getSuccessCount(),
+                tplUniqueChassisSummary.getFailureCount(),
+                compUniqueChassisSummary.getSuccessCount(),
+                compUniqueChassisSummary.getFailureCount());
     }
 
     private static QuoteGroupStats buildStats(GroupType groupType, List<QuoteRecord> records) {
