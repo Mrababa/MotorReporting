@@ -24,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -52,13 +53,15 @@ public class PdfReportGenerator {
                 addTitlePage(document);
                 addGroupPart(document,
                         "Part 1 - " + statistics.getTplStats().getGroupType().getDisplayName(),
-                        statistics.getTplStats());
+                        statistics.getTplStats(),
+                        statistics.getTplManufactureYearStats());
 
                 document.newPage();
 
                 addGroupPart(document,
                         "Part 2 - " + statistics.getComprehensiveStats().getGroupType().getDisplayName(),
-                        statistics.getComprehensiveStats());
+                        statistics.getComprehensiveStats(),
+                        statistics.getComprehensiveManufactureYearStats());
 
                 document.newPage();
 
@@ -99,7 +102,10 @@ public class PdfReportGenerator {
         addSpacing(document);
     }
 
-    private void addGroupPart(Document document, String partTitle, QuoteGroupStats stats)
+    private void addGroupPart(Document document,
+                              String partTitle,
+                              QuoteGroupStats stats,
+                              List<QuoteStatistics.ManufactureYearStats> manufactureYearStats)
             throws DocumentException, IOException {
         Paragraph header = new Paragraph(partTitle, SECTION_FONT);
         document.add(header);
@@ -170,6 +176,16 @@ public class PdfReportGenerator {
 
         JFreeChart yearChart = ChartCreator.createFailureByYearBarChart(stats);
         addChart(document, yearChart, 520, 320);
+        addSpacing(document);
+
+        Paragraph ratioHeader = new Paragraph("Success vs Failure Ratio by Manufacture Year", SUBTITLE_FONT);
+        document.add(ratioHeader);
+        addSpacing(document);
+
+        JFreeChart ratioChart = ChartCreator.createManufactureYearOutcomeChart(
+                stats.getGroupType().getDisplayName() + " - Success vs Failure Ratio by Manufacture Year",
+                manufactureYearStats);
+        addChart(document, ratioChart, 520, 320);
         addSpacing(document);
     }
 

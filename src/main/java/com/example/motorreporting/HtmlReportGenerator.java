@@ -372,6 +372,12 @@ public class HtmlReportGenerator {
         html.append("        <canvas id=\"tplAgeRatioChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Success vs Failure Ratio by Manufacture Year</h2>\n");
+        html.append("        <canvas id=\"tplManufactureYearChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
         appendModelChassisTable(html, "Top 10 Rejected Models (Unique Chassis)",
                 statistics.getTplTopRejectedModelsByUniqueChassis());
         appendErrorTable(html, "TPL Error Counts", statistics.getTplErrorCounts());
@@ -417,6 +423,12 @@ public class HtmlReportGenerator {
         html.append("      <div class=\"chart-card\">\n");
         html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
         html.append("        <canvas id=\"compAgeRatioChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Success vs Failure Ratio by Manufacture Year</h2>\n");
+        html.append("        <canvas id=\"compManufactureYearChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
@@ -775,6 +787,10 @@ public class HtmlReportGenerator {
         Map<String, QuoteStatistics.OutcomeBreakdown> compBodyOutcomes = statistics.getComprehensiveBodyCategoryOutcomes();
         List<QuoteStatistics.AgeRangeStats> tplAgeStats = statistics.getTplAgeRangeStats();
         List<QuoteStatistics.AgeRangeStats> compAgeStats = statistics.getComprehensiveAgeRangeStats();
+        List<QuoteStatistics.ManufactureYearStats> tplManufactureYearStats =
+                statistics.getTplManufactureYearStats();
+        List<QuoteStatistics.ManufactureYearStats> compManufactureYearStats =
+                statistics.getComprehensiveManufactureYearStats();
         List<QuoteStatistics.ValueRangeStats> compValueStats = statistics.getComprehensiveEstimatedValueStats();
 
         QuoteStatistics.OutcomeBreakdown tplGccBreakdown =
@@ -869,6 +885,36 @@ public class HtmlReportGenerator {
             compValueLabels.add("No Data");
             compValueSuccessRatios.add(0.0);
             compValueFailureRatios.add(0.0);
+        }
+
+        List<String> tplManufactureYearLabels = new ArrayList<>();
+        List<Double> tplManufactureYearSuccessRatios = new ArrayList<>();
+        List<Double> tplManufactureYearFailureRatios = new ArrayList<>();
+        if (tplManufactureYearStats.isEmpty()) {
+            tplManufactureYearLabels.add("No Data");
+            tplManufactureYearSuccessRatios.add(0.0);
+            tplManufactureYearFailureRatios.add(0.0);
+        } else {
+            for (QuoteStatistics.ManufactureYearStats stat : tplManufactureYearStats) {
+                tplManufactureYearLabels.add(stat.getLabel());
+                tplManufactureYearSuccessRatios.add(stat.getSuccessRatio());
+                tplManufactureYearFailureRatios.add(stat.getFailureRatio());
+            }
+        }
+
+        List<String> compManufactureYearLabels = new ArrayList<>();
+        List<Double> compManufactureYearSuccessRatios = new ArrayList<>();
+        List<Double> compManufactureYearFailureRatios = new ArrayList<>();
+        if (compManufactureYearStats.isEmpty()) {
+            compManufactureYearLabels.add("No Data");
+            compManufactureYearSuccessRatios.add(0.0);
+            compManufactureYearFailureRatios.add(0.0);
+        } else {
+            for (QuoteStatistics.ManufactureYearStats stat : compManufactureYearStats) {
+                compManufactureYearLabels.add(stat.getLabel());
+                compManufactureYearSuccessRatios.add(stat.getSuccessRatio());
+                compManufactureYearFailureRatios.add(stat.getFailureRatio());
+            }
         }
 
         StringBuilder script = new StringBuilder();
@@ -1003,6 +1049,48 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
+        script.append("  const tplManufactureYearData = {\n");
+        script.append("    labels: ").append(toJsStringArray(tplManufactureYearLabels)).append(",\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Success %',\n");
+        script.append("        data: ").append(toJsDoubleArray(tplManufactureYearSuccessRatios)).append(",\n");
+        script.append("        borderColor: '#16a34a',\n");
+        script.append("        backgroundColor: 'rgba(22, 163, 74, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Failure %',\n");
+        script.append("        data: ").append(toJsDoubleArray(tplManufactureYearFailureRatios)).append(",\n");
+        script.append("        borderColor: '#dc2626',\n");
+        script.append("        backgroundColor: 'rgba(220, 38, 38, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const compManufactureYearData = {\n");
+        script.append("    labels: ").append(toJsStringArray(compManufactureYearLabels)).append(",\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Success %',\n");
+        script.append("        data: ").append(toJsDoubleArray(compManufactureYearSuccessRatios)).append(",\n");
+        script.append("        borderColor: '#16a34a',\n");
+        script.append("        backgroundColor: 'rgba(22, 163, 74, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Failure %',\n");
+        script.append("        data: ").append(toJsDoubleArray(compManufactureYearFailureRatios)).append(",\n");
+        script.append("        borderColor: '#dc2626',\n");
+        script.append("        backgroundColor: 'rgba(220, 38, 38, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
         script.append("  const tplAgeRatioData = {\n");
         script.append("    labels: ").append(toJsStringArray(tplAgeLabels)).append(",\n");
         script.append("    datasets: [\n");
@@ -1078,6 +1166,16 @@ public class HtmlReportGenerator {
         script.append("  new Chart(document.getElementById('compBodyFailureChart'), { type: 'bar', data: compBodyFailureData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compSpecGccChart'), { type: 'bar', data: compSpecGccData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compSpecNonGccChart'), { type: 'bar', data: compSpecNonGccData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplManufactureYearChart'), {\n");
+        script.append("    type: 'line',\n");
+        script.append("    data: tplManufactureYearData,\n");
+        script.append("    options: ratioChartOptions\n");
+        script.append("  });\n");
+        script.append("  new Chart(document.getElementById('compManufactureYearChart'), {\n");
+        script.append("    type: 'line',\n");
+        script.append("    data: compManufactureYearData,\n");
+        script.append("    options: ratioChartOptions\n");
+        script.append("  });\n");
         script.append("  new Chart(document.getElementById('tplAgeRatioChart'), {\n");
         script.append("    type: 'line',\n");
         script.append("    data: tplAgeRatioData,\n");

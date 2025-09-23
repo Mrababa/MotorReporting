@@ -2,6 +2,7 @@ package com.example.motorreporting;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Year;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -13,6 +14,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -51,6 +53,10 @@ public final class QuoteStatisticsCalculator {
                 computeOutcomeBreakdown(compRecords, QuoteRecord::getOverrideSpecificationLabel);
         List<QuoteStatistics.AgeRangeStats> tplAgeRangeStats = computeAgeRangeStats(tplRecords);
         List<QuoteStatistics.AgeRangeStats> compAgeRangeStats = computeAgeRangeStats(compRecords);
+        List<QuoteStatistics.ManufactureYearStats> tplManufactureYearStats =
+                computeManufactureYearStats(tplRecords);
+        List<QuoteStatistics.ManufactureYearStats> compManufactureYearStats =
+                computeManufactureYearStats(compRecords);
         List<QuoteStatistics.ValueRangeStats> compEstimatedValueStats =
                 computeEstimatedValueRangeStats(compRecords);
         Map<String, Long> tplErrorCounts = computeErrorCounts(tplRecords, false);
@@ -71,6 +77,8 @@ public final class QuoteStatisticsCalculator {
                 compSpecificationOutcomes,
                 tplAgeRangeStats,
                 compAgeRangeStats,
+                tplManufactureYearStats,
+                compManufactureYearStats,
                 compEstimatedValueStats,
                 tplTopRejectedModels,
                 tplErrorCounts,
@@ -303,6 +311,63 @@ public final class QuoteStatisticsCalculator {
         return results;
     }
 
+    private static List<QuoteStatistics.ManufactureYearStats> computeManufactureYearStats(List<QuoteRecord> records) {
+        LinkedHashMap<String, OutcomeAccumulator> predefinedBuckets = new LinkedHashMap<>();
+        OutcomeAccumulator before2000 = new OutcomeAccumulator();
+        predefinedBuckets.put("<2000", before2000);
+
+        int currentYear = Year.now().getValue();
+        int endYear = currentYear + 1;
+        for (int year = 2000; year <= endYear; year++) {
+            predefinedBuckets.put(String.valueOf(year), new OutcomeAccumulator());
+        }
+
+        TreeMap<Integer, OutcomeAccumulator> futureBuckets = new TreeMap<>();
+        OutcomeAccumulator unknownBucket = new OutcomeAccumulator();
+
+        for (QuoteRecord record : records) {
+            if (!record.isSuccessful() && !record.isFailure()) {
+                continue;
+            }
+            OutcomeAccumulator accumulator = null;
+            Optional<Integer> manufactureYear = record.getManufactureYear();
+            if (manufactureYear.isEmpty()) {
+                accumulator = unknownBucket;
+            } else {
+                int year = manufactureYear.get();
+                if (year < 2000) {
+                    accumulator = before2000;
+                } else if (year <= endYear) {
+                    accumulator = predefinedBuckets.get(String.valueOf(year));
+                } else {
+                    accumulator = futureBuckets.computeIfAbsent(year, ignored -> new OutcomeAccumulator());
+                }
+            }
+
+            if (accumulator == null) {
+                continue;
+            }
+
+            if (record.isSuccessful()) {
+                accumulator.incrementSuccess();
+            } else {
+                accumulator.incrementFailure();
+            }
+        }
+
+        List<QuoteStatistics.ManufactureYearStats> results = new ArrayList<>();
+        for (Map.Entry<String, OutcomeAccumulator> entry : predefinedBuckets.entrySet()) {
+            results.add(entry.getValue().toManufactureYearStats(entry.getKey()));
+        }
+        for (Map.Entry<Integer, OutcomeAccumulator> entry : futureBuckets.entrySet()) {
+            results.add(entry.getValue().toManufactureYearStats(String.valueOf(entry.getKey())));
+        }
+        if (unknownBucket.total() > 0) {
+            results.add(unknownBucket.toManufactureYearStats("Unknown"));
+        }
+        return results;
+    }
+
     private static final class UniqueChassisSummary {
         private final long total;
         private final long successCount;
@@ -353,6 +418,10 @@ public final class QuoteStatisticsCalculator {
 
         private QuoteStatistics.ValueRangeStats toValueRangeStats(String label) {
             return new QuoteStatistics.ValueRangeStats(label, success, failure);
+        }
+
+        private QuoteStatistics.ManufactureYearStats toManufactureYearStats(String label) {
+            return new QuoteStatistics.ManufactureYearStats(label, success, failure);
         }
     }
 

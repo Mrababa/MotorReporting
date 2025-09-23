@@ -30,6 +30,8 @@ public class QuoteStatistics {
     private final Map<String, OutcomeBreakdown> comprehensiveSpecificationOutcomes;
     private final List<AgeRangeStats> tplAgeRangeStats;
     private final List<AgeRangeStats> comprehensiveAgeRangeStats;
+    private final List<ManufactureYearStats> tplManufactureYearStats;
+    private final List<ManufactureYearStats> comprehensiveManufactureYearStats;
     private final List<ValueRangeStats> comprehensiveEstimatedValueStats;
     private final List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis;
     private final Map<String, Long> tplErrorCounts;
@@ -50,6 +52,8 @@ public class QuoteStatistics {
                            Map<String, OutcomeBreakdown> comprehensiveSpecificationOutcomes,
                            List<AgeRangeStats> tplAgeRangeStats,
                            List<AgeRangeStats> comprehensiveAgeRangeStats,
+                           List<ManufactureYearStats> tplManufactureYearStats,
+                           List<ManufactureYearStats> comprehensiveManufactureYearStats,
                            List<ValueRangeStats> comprehensiveEstimatedValueStats,
                            List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis,
                            Map<String, Long> tplErrorCounts,
@@ -69,6 +73,8 @@ public class QuoteStatistics {
         this.comprehensiveSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveSpecificationOutcomes));
         this.tplAgeRangeStats = List.copyOf(tplAgeRangeStats);
         this.comprehensiveAgeRangeStats = List.copyOf(comprehensiveAgeRangeStats);
+        this.tplManufactureYearStats = List.copyOf(tplManufactureYearStats);
+        this.comprehensiveManufactureYearStats = List.copyOf(comprehensiveManufactureYearStats);
         this.comprehensiveEstimatedValueStats = List.copyOf(comprehensiveEstimatedValueStats);
         this.tplTopRejectedModelsByUniqueChassis = List.copyOf(tplTopRejectedModelsByUniqueChassis);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
@@ -157,6 +163,14 @@ public class QuoteStatistics {
 
     public List<ValueRangeStats> getComprehensiveEstimatedValueStats() {
         return comprehensiveEstimatedValueStats;
+    }
+
+    public List<ManufactureYearStats> getTplManufactureYearStats() {
+        return tplManufactureYearStats;
+    }
+
+    public List<ManufactureYearStats> getComprehensiveManufactureYearStats() {
+        return comprehensiveManufactureYearStats;
     }
 
     public Map<String, Long> getComprehensiveErrorCounts() {
@@ -316,6 +330,50 @@ public class QuoteStatistics {
         private final long failureCount;
 
         public ValueRangeStats(String label, long successCount, long failureCount) {
+            this.label = Objects.requireNonNull(label, "label");
+            this.successCount = successCount;
+            this.failureCount = failureCount;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public long getSuccessCount() {
+            return successCount;
+        }
+
+        public long getFailureCount() {
+            return failureCount;
+        }
+
+        public long getProcessedTotal() {
+            return successCount + failureCount;
+        }
+
+        public double getSuccessRatio() {
+            long total = getProcessedTotal();
+            if (total == 0) {
+                return 0.0;
+            }
+            return (successCount * 100.0) / total;
+        }
+
+        public double getFailureRatio() {
+            long total = getProcessedTotal();
+            if (total == 0) {
+                return 0.0;
+            }
+            return (failureCount * 100.0) / total;
+        }
+    }
+
+    public static final class ManufactureYearStats {
+        private final String label;
+        private final long successCount;
+        private final long failureCount;
+
+        public ManufactureYearStats(String label, long successCount, long failureCount) {
             this.label = Objects.requireNonNull(label, "label");
             this.successCount = successCount;
             this.failureCount = failureCount;
