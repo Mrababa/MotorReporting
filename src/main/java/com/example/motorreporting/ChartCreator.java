@@ -26,16 +26,20 @@ public final class ChartCreator {
     }
 
     public static JFreeChart createFailureReasonPieChart(QuoteGroupStats stats) {
+        String title = stats.getGroupType().getDisplayName() + " - Failure Reasons";
+        return createFailureReasonPieChart(title, stats.getFailureReasonCounts());
+    }
+
+    public static JFreeChart createFailureReasonPieChart(String title, Map<String, Long> failureReasons) {
         DefaultPieDataset<String> dataset = new DefaultPieDataset<>();
-        Map<String, Long> failureReasons = stats.getFailureReasonCounts();
-        if (failureReasons.isEmpty()) {
+        if (failureReasons == null || failureReasons.isEmpty()) {
             dataset.setValue("No Failures", 1);
         } else {
             failureReasons.forEach(dataset::setValue);
         }
 
         JFreeChart chart = ChartFactory.createPieChart(
-                stats.getGroupType().getDisplayName() + " - Failure Reasons",
+                title,
                 dataset,
                 true,
                 true,
@@ -77,17 +81,22 @@ public final class ChartCreator {
     }
 
     public static JFreeChart createFailureByYearBarChart(QuoteGroupStats stats) {
-        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
-        Map<String, Long> failuresByYear = stats.getFailuresByManufactureYear();
+        String title = stats.getGroupType().getDisplayName() + " - Failures by Manufacture Year";
+        return createFailureByYearBarChart(title, stats.getGroupType().getShortLabel(),
+                stats.getFailuresByManufactureYear());
+    }
 
-        if (failuresByYear.isEmpty()) {
-            dataset.addValue(0, stats.getGroupType().getShortLabel(), "No Data");
+    public static JFreeChart createFailureByYearBarChart(String title, String seriesLabel,
+                                                         Map<String, Long> failuresByYear) {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+
+        if (failuresByYear == null || failuresByYear.isEmpty()) {
+            dataset.addValue(0, seriesLabel, "No Data");
         } else {
             failuresByYear.forEach((year, count) ->
-                    dataset.addValue(count, stats.getGroupType().getShortLabel(), year));
+                    dataset.addValue(count, seriesLabel, year));
         }
 
-        String title = stats.getGroupType().getDisplayName() + " - Failures by Manufacture Year";
         JFreeChart chart = ChartFactory.createBarChart(
                 title,
                 "Manufacture Year",

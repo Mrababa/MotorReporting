@@ -56,6 +56,10 @@ public class PdfReportGenerator {
                 addGroupPart(document,
                         "Part 2 - " + statistics.getComprehensiveStats().getGroupType().getDisplayName(),
                         statistics.getComprehensiveStats());
+
+                document.newPage();
+
+                addOverallPart(document, "Part 3 - Overall Summary", statistics);
             } finally {
                 if (document.isOpen()) {
                     document.close();
@@ -148,6 +152,93 @@ public class PdfReportGenerator {
 
         JFreeChart yearChart = ChartCreator.createFailureByYearBarChart(stats);
         addChart(document, yearChart, 520, 320);
+        addSpacing(document);
+    }
+
+    private void addOverallPart(Document document, String partTitle, QuoteStatistics statistics)
+            throws DocumentException, IOException {
+        Paragraph header = new Paragraph(partTitle, SECTION_FONT);
+        document.add(header);
+        addSpacing(document);
+
+        if (statistics.getOverallTotalQuotes() == 0) {
+            Paragraph empty = new Paragraph("No quotes available across all insurance types.", NORMAL_FONT);
+            document.add(empty);
+            return;
+        }
+
+        PdfPTable metrics = new PdfPTable(new float[]{3f, 2f});
+        metrics.setWidthPercentage(100);
+        metrics.setSpacingBefore(8f);
+        metrics.addCell(createHeaderCell("Metric"));
+        metrics.addCell(createHeaderCell("Value"));
+
+        metrics.addCell(createValueCell("Total Quotes"));
+        metrics.addCell(createValueCell(INTEGER_FORMAT.format(statistics.getOverallTotalQuotes())));
+        metrics.addCell(createValueCell("Success Count"));
+        metrics.addCell(createValueCell(INTEGER_FORMAT.format(statistics.getOverallPassCount())));
+        metrics.addCell(createValueCell("Failure Count"));
+        metrics.addCell(createValueCell(INTEGER_FORMAT.format(statistics.getOverallFailCount())));
+        metrics.addCell(createValueCell("Skipped Count"));
+        metrics.addCell(createValueCell(INTEGER_FORMAT.format(statistics.getOverallSkipCount())));
+        metrics.addCell(createValueCell("Failure %"));
+        metrics.addCell(createValueCell(PERCENT_FORMAT.format(statistics.getOverallFailurePercentage())));
+        metrics.addCell(createValueCell("Blocked Estimated Value"));
+        metrics.addCell(createValueCell(CURRENCY_FORMAT.format(statistics.getOverallBlockedEstimatedValue())));
+
+        document.add(metrics);
+        addSpacing(document);
+
+        Paragraph breakdownHeader = new Paragraph("Failure Breakdown", SUBTITLE_FONT);
+        document.add(breakdownHeader);
+
+        PdfPTable breakdownTable = new PdfPTable(new float[]{4f, 1f});
+        breakdownTable.setWidthPercentage(100);
+        breakdownTable.setSpacingBefore(6f);
+        breakdownTable.addCell(createHeaderCell("Error Text"));
+        breakdownTable.addCell(createHeaderCell("Count"));
+
+        Map<String, Long> combinedFailureReasons = statistics.getCombinedFailureReasons();
+        if (combinedFailureReasons.isEmpty()) {
+            PdfPCell reasonCell = createValueCell("No failures recorded");
+            reasonCell.setColspan(2);
+            breakdownTable.addCell(reasonCell);
+        } else {
+            combinedFailureReasons.forEach((reason, count) -> {
+                breakdownTable.addCell(createValueCell(reason));
+                breakdownTable.addCell(createValueCell(INTEGER_FORMAT.format(count)));
+            });
+        }
+
+        document.add(breakdownTable);
+        addSpacing(document);
+
+        Paragraph pieHeader = new Paragraph("Failure Reasons Distribution", SUBTITLE_FONT);
+        document.add(pieHeader);
+        addSpacing(document);
+
+        JFreeChart pieChart = ChartCreator.createFailureReasonPieChart(
+                "Overall - Failure Reasons", combinedFailureReasons);
+        addChart(document, pieChart, 480, 320);
+        addSpacing(document);
+
+        Paragraph yearHeader = new Paragraph("Failures by Manufacture Year", SUBTITLE_FONT);
+        document.add(yearHeader);
+        addSpacing(document);
+
+        JFreeChart yearChart = ChartCreator.createFailureByYearBarChart(
+                "Overall - Failures by Manufacture Year",
+                "Overall",
+                statistics.getCombinedFailuresByManufactureYear());
+        addChart(document, yearChart, 520, 320);
+        addSpacing(document);
+
+        Paragraph kpiHeader = new Paragraph("KPI Summary Comparison", SUBTITLE_FONT);
+        document.add(kpiHeader);
+        addSpacing(document);
+
+        JFreeChart kpiChart = ChartCreator.createKpiSummaryChart(statistics);
+        addChart(document, kpiChart, 520, 320);
         addSpacing(document);
     }
 
