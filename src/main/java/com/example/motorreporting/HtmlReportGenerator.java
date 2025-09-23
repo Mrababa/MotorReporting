@@ -805,9 +805,69 @@ public class HtmlReportGenerator {
         return PERCENT_FORMAT.format(value) + "%";
     }
 
-    private record ChartData(String canvasId, String labelsJson, String valuesJson, String colorsJson) {
+    private static final class ChartData {
+        private final String canvasId;
+        private final String labelsJson;
+        private final String valuesJson;
+        private final String colorsJson;
+
+        private ChartData(String canvasId, String labelsJson, String valuesJson, String colorsJson) {
+            this.canvasId = canvasId;
+            this.labelsJson = labelsJson;
+            this.valuesJson = valuesJson;
+            this.colorsJson = colorsJson;
+        }
+
+        private String canvasId() {
+            return canvasId;
+        }
+
+        private String labelsJson() {
+            return labelsJson;
+        }
+
+        private String valuesJson() {
+            return valuesJson;
+        }
+
+        private String colorsJson() {
+            return colorsJson;
+        }
     }
 
-    private record TrendData(List<String> labels, String labelsJson, String totalJson, String successJson, String failureJson) {
+    private static final class TrendData {
+        private final List<String> labels;
+        private final String labelsJson;
+        private final String totalJson;
+        private final String successJson;
+        private final String failureJson;
+
+        private TrendData(List<String> labels, String labelsJson, String totalJson, String successJson, String failureJson) {
+            this.labels = labels;
+            this.labelsJson = labelsJson;
+            this.totalJson = totalJson;
+            this.successJson = successJson;
+            this.failureJson = failureJson;
+        }
+
+        private List<String> labels() {
+            return labels;
+        }
+
+        private String labelsJson() {
+            return labelsJson;
+        }
+
+        private String totalJson() {
+            return totalJson;
+        }
+
+        private String successJson() {
+            return successJson;
+        }
+
+        private String failureJson() {
+            return failureJson;
+        }
     }
 }
