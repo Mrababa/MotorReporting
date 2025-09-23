@@ -61,18 +61,21 @@ public final class QuoteReportGenerator {
     }
 
     public static Path generateReport(Path inputPath) throws IOException {
-        List<QuoteRecord> records = QuoteDataLoader.load(inputPath);
-        if (records.isEmpty()) {
+        List<QuoteRecord> cleanedRecords = QuoteDataLoader.load(inputPath);
+        Path readyDataPath = ReadyDataWriter.writeCleanedData(inputPath, cleanedRecords);
+
+        if (cleanedRecords.isEmpty()) {
             System.err.println("No records found in file: " + inputPath);
         }
 
-        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(records);
+        List<QuoteRecord> recordsForReport = QuoteDataLoader.load(readyDataPath);
+        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(recordsForReport);
         Path outputPath = inputPath.toAbsolutePath().getParent() != null
                 ? inputPath.toAbsolutePath().getParent().resolve("quote_generation_report.html")
                 : Paths.get("quote_generation_report.html");
 
         HtmlReportGenerator htmlReportGenerator = new HtmlReportGenerator();
-        htmlReportGenerator.generate(outputPath, statistics, records);
+        htmlReportGenerator.generate(outputPath, statistics, recordsForReport);
         return outputPath;
     }
 
