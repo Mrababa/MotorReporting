@@ -34,11 +34,7 @@ final class DateNormalizer {
     }
 
     static boolean isDateColumn(String header) {
-        if (header == null) {
-            return false;
-        }
-        String normalized = header.toLowerCase(Locale.ROOT);
-        return normalized.contains("date") || normalized.contains("expiry");
+        return header != null && header.toLowerCase(Locale.ROOT).contains("date");
     }
 
     static String normalize(String value) {
