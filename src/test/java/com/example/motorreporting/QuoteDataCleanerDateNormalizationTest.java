@@ -1,6 +1,7 @@
 package com.example.motorreporting;
 
 import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvValidationException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -22,7 +23,7 @@ class QuoteDataCleanerDateNormalizationTest {
     Path tempDir;
 
     @Test
-    void writesDateColumnsInConsistentFormat() throws IOException {
+    void writesDateColumnsInConsistentFormat() throws IOException, CsvValidationException {
         Map<String, String> values = new HashMap<>();
         values.put("Start_Date", "03-21-2024");
         values.put("CreatedDate", "2024/03/22 5:45");
