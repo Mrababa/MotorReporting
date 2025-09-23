@@ -87,6 +87,9 @@ public final class QuoteDataCleaner {
             String key = entry.getKey();
             if (key != null && key.equalsIgnoreCase(header)) {
                 String value = entry.getValue();
+                if (DateNormalizer.isDateColumn(header)) {
+                    return DateNormalizer.normalize(value);
+                }
                 return value == null ? "" : value;
             }
         }
