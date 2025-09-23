@@ -21,8 +21,13 @@ public final class MotorReportingMain {
         }
 
         try {
-            Path outputPath = run(args[0]);
-            System.out.println("Report generated at: " + outputPath.toAbsolutePath());
+            ReportGenerationResult result = run(args[0]);
+            System.out.println("Cleaned data file created at: "
+                    + result.getCleanedDataPath().toAbsolutePath());
+            System.out.println("HTML report generated at: "
+                    + result.getHtmlReportPath().toAbsolutePath());
+            System.out.println("PDF report generated at: "
+                    + result.getPdfReportPath().toAbsolutePath());
         } catch (IOException ex) {
             System.err.println("Failed to generate report: " + ex.getMessage());
             ex.printStackTrace();
@@ -30,7 +35,7 @@ public final class MotorReportingMain {
         }
     }
 
-    public static Path run(String fileName) throws IOException {
+    public static ReportGenerationResult run(String fileName) throws IOException {
         Objects.requireNonNull(fileName, "fileName");
         Path inputPath = QuoteReportGenerator.resolveInputPath(fileName);
         return QuoteReportGenerator.generateReport(inputPath);

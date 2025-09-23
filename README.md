@@ -32,8 +32,14 @@ mvn clean package
 java -jar target/motor-reporting-1.0-SNAPSHOT-jar-with-dependencies.jar /path/to/quotes.xlsx
 ```
 
-The HTML report is created in the same directory as the input file. For CSV inputs simply point
-the command at the `.csv` file.
+The command now executes three sequential steps:
+
+1. Cleans the dataset and writes `quote_generation_cleaned.csv` beside the source file.
+2. Builds the HTML dashboard `quote_generation_report.html` in the same directory.
+3. Generates the PDF summary `quote_generation_report.pdf` alongside the other outputs.
+
+For CSV inputs simply point the command at the `.csv` file and the same trio of artifacts will be
+created next to it.
 
 ### Running from an IDE
 
