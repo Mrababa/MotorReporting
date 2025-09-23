@@ -36,8 +36,13 @@ public final class QuoteReportGenerator {
         }
 
         try {
-            Path outputPath = generateReport(inputPath);
-            System.out.println("Report generated at: " + outputPath.toAbsolutePath());
+            ReportGenerationResult result = generateReport(inputPath);
+            System.out.println("Cleaned data file created at: "
+                    + result.getCleanedDataPath().toAbsolutePath());
+            System.out.println("HTML report generated at: "
+                    + result.getHtmlReportPath().toAbsolutePath());
+            System.out.println("PDF report generated at: "
+                    + result.getPdfReportPath().toAbsolutePath());
         } catch (IOException ex) {
             System.err.println("Failed to generate report: " + ex.getMessage());
             ex.printStackTrace();
@@ -60,20 +65,35 @@ public final class QuoteReportGenerator {
         return findSingleFileInSourceDirectory();
     }
 
-    public static Path generateReport(Path inputPath) throws IOException {
+    public static ReportGenerationResult generateReport(Path inputPath) throws IOException {
         List<QuoteRecord> records = QuoteDataLoader.load(inputPath);
         if (records.isEmpty()) {
             System.err.println("No records found in file: " + inputPath);
         }
 
-        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(records);
-        Path outputPath = inputPath.toAbsolutePath().getParent() != null
-                ? inputPath.toAbsolutePath().getParent().resolve("quote_generation_report.html")
-                : Paths.get("quote_generation_report.html");
+        Path outputDirectory = determineOutputDirectory(inputPath);
 
+        Path cleanedDataPath = QuoteDataCleaner.writeCleanFile(outputDirectory, records);
+
+        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(records);
+
+        Path htmlReportPath = outputDirectory.resolve("quote_generation_report.html");
         HtmlReportGenerator htmlReportGenerator = new HtmlReportGenerator();
-        htmlReportGenerator.generate(outputPath, statistics, records);
-        return outputPath;
+        htmlReportGenerator.generate(htmlReportPath, statistics, records);
+
+        Path pdfReportPath = outputDirectory.resolve("quote_generation_report.pdf");
+        PdfReportGenerator pdfReportGenerator = new PdfReportGenerator();
+        pdfReportGenerator.generate(pdfReportPath, statistics);
+
+        return new ReportGenerationResult(cleanedDataPath, htmlReportPath, pdfReportPath);
+    }
+
+    private static Path determineOutputDirectory(Path inputPath) {
+        Path parent = inputPath.toAbsolutePath().getParent();
+        if (parent != null) {
+            return parent;
+        }
+        return Paths.get(".").toAbsolutePath().normalize();
     }
 
     private static Path findSingleFileInSourceDirectory() throws IOException {
