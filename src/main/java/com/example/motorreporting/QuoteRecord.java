@@ -43,12 +43,18 @@ public class QuoteRecord {
             }
         });
 
+        String errorText = getValueIgnoreCase(normalized, "ErrorText");
+        String quoteNumber = extractQuoteNumber(normalized);
+        String derivedStatus = determineStatus(errorText, quoteNumber);
+        if (derivedStatus != null) {
+            setValueIgnoreCase(normalized, "Status", derivedStatus);
+        }
+        normalizeOverrideIsGccSpec(normalized);
+
         String insuranceType = getValueIgnoreCase(normalized, "InsuranceType");
         String status = getValueIgnoreCase(normalized, "Status");
-        String errorText = getValueIgnoreCase(normalized, "ErrorText");
         Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
-        String quoteNumber = extractQuoteNumber(normalized);
 
         return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue, quoteNumber);
     }
@@ -60,6 +66,50 @@ public class QuoteRecord {
             }
         }
         return "";
+    }
+
+    private static void setValueIgnoreCase(Map<String, String> values, String key, String newValue) {
+        String existingKey = null;
+        for (String currentKey : values.keySet()) {
+            if (currentKey != null && currentKey.equalsIgnoreCase(key)) {
+                existingKey = currentKey;
+                break;
+            }
+        }
+        if (existingKey != null) {
+            values.put(existingKey, newValue);
+        } else {
+            values.put(key, newValue);
+        }
+    }
+
+    private static String determineStatus(String errorText, String quoteNumber) {
+        boolean hasError = errorText != null && !errorText.isBlank();
+        boolean hasQuoteNumber = quoteNumber != null && !quoteNumber.isBlank();
+        if (hasError) {
+            return "Failed";
+        }
+        if (hasQuoteNumber) {
+            return "Pass";
+        }
+        return "Skipped";
+    }
+
+    private static void normalizeOverrideIsGccSpec(Map<String, String> values) {
+        String rawValue = getValueIgnoreCase(values, "OverrideIsGccSpec");
+        if (rawValue == null) {
+            return;
+        }
+        String trimmed = rawValue.trim();
+        String replacement = null;
+        if ("1".equals(trimmed)) {
+            replacement = "GCC";
+        } else if ("2".equals(trimmed)) {
+            replacement = "None GCC";
+        }
+        if (replacement != null) {
+            setValueIgnoreCase(values, "OverrideIsGccSpec", replacement);
+        }
     }
 
     private static String extractQuoteNumber(Map<String, String> values) {
