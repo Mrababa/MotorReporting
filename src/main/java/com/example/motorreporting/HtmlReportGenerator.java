@@ -575,8 +575,8 @@ public class HtmlReportGenerator {
             values.add(count);
         });
         if (labels.isEmpty()) {
-            labels = List.of("No Failures Recorded");
-            values = List.of(1L);
+            labels.add("No Failures Recorded");
+            values.add(1L);
         }
         List<String> colors = createPalette(labels.size());
         String canvasId = stats.getGroupType() == GroupType.TPL ? "tplFailureReasonsChart" : "compFailureReasonsChart";
@@ -591,8 +591,8 @@ public class HtmlReportGenerator {
             values.add(count);
         });
         if (labels.isEmpty()) {
-            labels = List.of("No Data");
-            values = List.of(0L);
+            labels.add("No Data");
+            values.add(0L);
         }
         List<String> colors = Collections.nCopies(labels.size(), stats.getGroupType() == GroupType.TPL ? "rgba(13, 110, 253, 0.85)" : "rgba(220, 53, 69, 0.85)");
         String canvasId = stats.getGroupType() == GroupType.TPL ? "tplFailureByYearChart" : "compFailureByYearChart";
