@@ -18,9 +18,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Locale;
 
 /**
  * Loads quote data from either Excel or CSV files.
@@ -120,7 +120,8 @@ public final class QuoteDataLoader {
             Map<Integer, String> headerIndex = new HashMap<>();
             for (int i = 0; i < headers.length; i++) {
                 if (headers[i] != null && !headers[i].trim().isEmpty()) {
-                    headerIndex.put(i, headers[i].trim());
+                    String header = headers[i].trim();
+                    headerIndex.put(i, header);
                 }
             }
 
@@ -134,6 +135,9 @@ public final class QuoteDataLoader {
                     int index = entry.getKey();
                     String header = entry.getValue();
                     String value = index < row.length && row[index] != null ? row[index].trim() : "";
+                    if (DateNormalizer.isDateColumn(header)) {
+                        value = DateNormalizer.normalize(value);
+                    }
                     values.put(header, value);
                 }
                 records.add(QuoteRecord.fromValues(values));
