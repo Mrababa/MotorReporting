@@ -12,6 +12,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -36,6 +37,11 @@ public class HtmlReportGenerator {
             DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US);
     private static final String QUOTE_REQUESTED_ON_KEY_NORMALIZED =
             normalizeHeaderKey("QuoteRequestedOn");
+    private static final String SPEC_GCC_LABEL = "GCC";
+    private static final String SPEC_NON_GCC_LABEL = "Non GCC";
+    private static final String SPEC_UNKNOWN_LABEL = "Unknown";
+    private static final QuoteStatistics.OutcomeBreakdown EMPTY_OUTCOME =
+            new QuoteStatistics.OutcomeBreakdown(0, 0);
 
     static {
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
@@ -60,6 +66,10 @@ public class HtmlReportGenerator {
     private String buildHtml(QuoteStatistics statistics, List<QuoteRecord> records) {
         QuoteGroupStats tplStats = statistics.getTplStats();
         QuoteGroupStats compStats = statistics.getComprehensiveStats();
+        Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecificationSummary =
+                aggregateSpecificationOutcomes(statistics.getTplSpecificationOutcomes());
+        Map<String, QuoteStatistics.OutcomeBreakdown> compSpecificationSummary =
+                aggregateSpecificationOutcomes(statistics.getComprehensiveSpecificationOutcomes());
 
         long totalQuotes = statistics.getOverallTotalQuotes();
         long successCount = statistics.getOverallPassCount();
@@ -343,19 +353,19 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
         appendOutcomeTable(html, "Body Category Outcomes", statistics.getTplBodyCategoryOutcomes());
         html.append("    <div class=\"charts\">\n");
-        html.append("      <h2 class=\"section-title\">TPL Requests by Specification</h2>\n");
+        html.append("      <h2 class=\"section-title\">TPL Specification Outcomes</h2>\n");
         html.append("      <div class=\"chart-grid\">\n");
         html.append("        <div class=\"chart-card\">\n");
-        html.append("          <h2>Successful Requests</h2>\n");
-        html.append("          <canvas id=\"tplSpecSuccessChart\"></canvas>\n");
+        html.append("          <h2>GCC</h2>\n");
+        html.append("          <canvas id=\"tplSpecGccChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("        <div class=\"chart-card\">\n");
-        html.append("          <h2>Failed Requests</h2>\n");
-        html.append("          <canvas id=\"tplSpecFailureChart\"></canvas>\n");
+        html.append("          <h2>Non-GCC</h2>\n");
+        html.append("          <canvas id=\"tplSpecNonGccChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
-        appendOutcomeTable(html, "Specification Outcomes", statistics.getTplSpecificationOutcomes());
+        appendOutcomeTable(html, "Specification Outcomes (GCC vs Non-GCC)", tplSpecificationSummary);
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card\">\n");
         html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
@@ -390,19 +400,19 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
         appendOutcomeTable(html, "Comprehensive Body Category Outcomes", statistics.getComprehensiveBodyCategoryOutcomes());
         html.append("    <div class=\"charts\">\n");
-        html.append("      <h2 class=\"section-title\">Comprehensive Requests by Specification</h2>\n");
+        html.append("      <h2 class=\"section-title\">Comprehensive Specification Outcomes</h2>\n");
         html.append("      <div class=\"chart-grid\">\n");
         html.append("        <div class=\"chart-card\">\n");
-        html.append("          <h2>Successful Requests</h2>\n");
-        html.append("          <canvas id=\"compSpecSuccessChart\"></canvas>\n");
+        html.append("          <h2>GCC</h2>\n");
+        html.append("          <canvas id=\"compSpecGccChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("        <div class=\"chart-card\">\n");
-        html.append("          <h2>Failed Requests</h2>\n");
-        html.append("          <canvas id=\"compSpecFailureChart\"></canvas>\n");
+        html.append("          <h2>Non-GCC</h2>\n");
+        html.append("          <canvas id=\"compSpecNonGccChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
-        appendOutcomeTable(html, "Comprehensive Specification Outcomes", statistics.getComprehensiveSpecificationOutcomes());
+        appendOutcomeTable(html, "Comprehensive Specification Outcomes (GCC vs Non-GCC)", compSpecificationSummary);
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card\">\n");
         html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
@@ -418,7 +428,7 @@ public class HtmlReportGenerator {
         appendErrorTable(html, "Comprehensive Error Counts", statistics.getComprehensiveErrorCounts());
         html.append("  </section>\n");
         html.append("</main>\n");
-        html.append(buildScripts(statistics));
+        html.append(buildScripts(statistics, tplSpecificationSummary, compSpecificationSummary));
         html.append("</body>\n");
         html.append("</html>\n");
         return html.toString();
@@ -553,6 +563,85 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
+    private Map<String, QuoteStatistics.OutcomeBreakdown> aggregateSpecificationOutcomes(
+            Map<String, QuoteStatistics.OutcomeBreakdown> original) {
+        long gccSuccess = 0L;
+        long gccFailure = 0L;
+        long nonGccSuccess = 0L;
+        long nonGccFailure = 0L;
+        long unknownSuccess = 0L;
+        long unknownFailure = 0L;
+
+        for (Map.Entry<String, QuoteStatistics.OutcomeBreakdown> entry : original.entrySet()) {
+            QuoteStatistics.OutcomeBreakdown breakdown = entry.getValue();
+            if (breakdown == null) {
+                continue;
+            }
+            SpecificationCategory category = classifySpecificationLabel(entry.getKey());
+            switch (category) {
+                case GCC:
+                    gccSuccess += breakdown.getSuccessCount();
+                    gccFailure += breakdown.getFailureCount();
+                    break;
+                case NON_GCC:
+                    nonGccSuccess += breakdown.getSuccessCount();
+                    nonGccFailure += breakdown.getFailureCount();
+                    break;
+                default:
+                    unknownSuccess += breakdown.getSuccessCount();
+                    unknownFailure += breakdown.getFailureCount();
+                    break;
+            }
+        }
+
+        LinkedHashMap<String, QuoteStatistics.OutcomeBreakdown> aggregated = new LinkedHashMap<>();
+        aggregated.put(SPEC_GCC_LABEL, new QuoteStatistics.OutcomeBreakdown(gccSuccess, gccFailure));
+        aggregated.put(SPEC_NON_GCC_LABEL, new QuoteStatistics.OutcomeBreakdown(nonGccSuccess, nonGccFailure));
+        if (unknownSuccess > 0 || unknownFailure > 0) {
+            aggregated.put(SPEC_UNKNOWN_LABEL, new QuoteStatistics.OutcomeBreakdown(unknownSuccess, unknownFailure));
+        }
+        return aggregated;
+    }
+
+    private static SpecificationCategory classifySpecificationLabel(String label) {
+        if (label == null) {
+            return SpecificationCategory.UNKNOWN;
+        }
+        String normalized = label.trim();
+        if (normalized.isEmpty()) {
+            return SpecificationCategory.UNKNOWN;
+        }
+        String lower = normalized.toLowerCase(Locale.ROOT);
+        if ("unknown".equals(lower)) {
+            return SpecificationCategory.UNKNOWN;
+        }
+        String condensed = lower.replace("-", "").replace(" ", "");
+        switch (condensed) {
+            case "gcc":
+            case "gccspec":
+            case "gccspecification":
+            case "true":
+            case "1":
+            case "yes":
+                return SpecificationCategory.GCC;
+            case "nongcc":
+            case "nonegcc":
+            case "nongccspec":
+            case "false":
+            case "0":
+            case "no":
+                return SpecificationCategory.NON_GCC;
+            default:
+                return SpecificationCategory.UNKNOWN;
+        }
+    }
+
+    private enum SpecificationCategory {
+        GCC,
+        NON_GCC,
+        UNKNOWN
+    }
+
     private void appendOutcomeTable(StringBuilder html,
                                     String heading,
                                     Map<String, QuoteStatistics.OutcomeBreakdown> breakdown) {
@@ -672,7 +761,9 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
-    private String buildScripts(QuoteStatistics statistics) {
+    private String buildScripts(QuoteStatistics statistics,
+                                Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecSummary,
+                                Map<String, QuoteStatistics.OutcomeBreakdown> compSpecSummary) {
         QuoteGroupStats tplStats = statistics.getTplStats();
         QuoteGroupStats compStats = statistics.getComprehensiveStats();
         long tplUniqueChassisSuccess = statistics.getTplUniqueChassisSuccessCount();
@@ -681,12 +772,27 @@ public class HtmlReportGenerator {
         long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
 
         Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyOutcomes = statistics.getTplBodyCategoryOutcomes();
-        Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecOutcomes = statistics.getTplSpecificationOutcomes();
         Map<String, QuoteStatistics.OutcomeBreakdown> compBodyOutcomes = statistics.getComprehensiveBodyCategoryOutcomes();
-        Map<String, QuoteStatistics.OutcomeBreakdown> compSpecOutcomes = statistics.getComprehensiveSpecificationOutcomes();
         List<QuoteStatistics.AgeRangeStats> tplAgeStats = statistics.getTplAgeRangeStats();
         List<QuoteStatistics.AgeRangeStats> compAgeStats = statistics.getComprehensiveAgeRangeStats();
         List<QuoteStatistics.ValueRangeStats> compValueStats = statistics.getComprehensiveEstimatedValueStats();
+
+        QuoteStatistics.OutcomeBreakdown tplGccBreakdown =
+                tplSpecSummary.getOrDefault(SPEC_GCC_LABEL, EMPTY_OUTCOME);
+        QuoteStatistics.OutcomeBreakdown tplNonGccBreakdown =
+                tplSpecSummary.getOrDefault(SPEC_NON_GCC_LABEL, EMPTY_OUTCOME);
+        QuoteStatistics.OutcomeBreakdown compGccBreakdown =
+                compSpecSummary.getOrDefault(SPEC_GCC_LABEL, EMPTY_OUTCOME);
+        QuoteStatistics.OutcomeBreakdown compNonGccBreakdown =
+                compSpecSummary.getOrDefault(SPEC_NON_GCC_LABEL, EMPTY_OUTCOME);
+        long tplSpecGccSuccess = tplGccBreakdown.getSuccessCount();
+        long tplSpecGccFailure = tplGccBreakdown.getFailureCount();
+        long tplSpecNonGccSuccess = tplNonGccBreakdown.getSuccessCount();
+        long tplSpecNonGccFailure = tplNonGccBreakdown.getFailureCount();
+        long compSpecGccSuccess = compGccBreakdown.getSuccessCount();
+        long compSpecGccFailure = compGccBreakdown.getFailureCount();
+        long compSpecNonGccSuccess = compNonGccBreakdown.getSuccessCount();
+        long compSpecNonGccFailure = compNonGccBreakdown.getFailureCount();
 
         List<String> tplBodyLabels = new ArrayList<>(tplBodyOutcomes.keySet());
         List<Long> tplBodySuccessValues = new ArrayList<>();
@@ -713,34 +819,6 @@ public class HtmlReportGenerator {
             for (QuoteStatistics.OutcomeBreakdown breakdown : compBodyOutcomes.values()) {
                 compBodySuccessValues.add(breakdown.getSuccessCount());
                 compBodyFailureValues.add(breakdown.getFailureCount());
-            }
-        }
-
-        List<String> tplSpecLabels = new ArrayList<>(tplSpecOutcomes.keySet());
-        List<Long> tplSpecSuccessValues = new ArrayList<>();
-        List<Long> tplSpecFailureValues = new ArrayList<>();
-        if (tplSpecLabels.isEmpty()) {
-            tplSpecLabels.add("No Data");
-            tplSpecSuccessValues.add(0L);
-            tplSpecFailureValues.add(0L);
-        } else {
-            for (QuoteStatistics.OutcomeBreakdown breakdown : tplSpecOutcomes.values()) {
-                tplSpecSuccessValues.add(breakdown.getSuccessCount());
-                tplSpecFailureValues.add(breakdown.getFailureCount());
-            }
-        }
-
-        List<String> compSpecLabels = new ArrayList<>(compSpecOutcomes.keySet());
-        List<Long> compSpecSuccessValues = new ArrayList<>();
-        List<Long> compSpecFailureValues = new ArrayList<>();
-        if (compSpecLabels.isEmpty()) {
-            compSpecLabels.add("No Data");
-            compSpecSuccessValues.add(0L);
-            compSpecFailureValues.add(0L);
-        } else {
-            for (QuoteStatistics.OutcomeBreakdown breakdown : compSpecOutcomes.values()) {
-                compSpecSuccessValues.add(breakdown.getSuccessCount());
-                compSpecFailureValues.add(breakdown.getFailureCount());
             }
         }
 
@@ -889,41 +967,39 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const tplSpecLabels = ").append(toJsStringArray(tplSpecLabels)).append(";\n");
-        script.append("  const tplSpecSuccessData = {\n");
-        script.append("    labels: tplSpecLabels,\n");
+        script.append("  const tplSpecGccData = {\n");
+        script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
-        script.append("      label: 'Successful Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(tplSpecSuccessValues)).append(",\n");
-        script.append("      backgroundColor: '#16a34a',\n");
+        script.append("      label: 'GCC',\n");
+        script.append("      data: [").append(tplSpecGccSuccess).append(',').append(tplSpecGccFailure).append("],\n");
+        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const tplSpecFailureData = {\n");
-        script.append("    labels: tplSpecLabels,\n");
+        script.append("  const tplSpecNonGccData = {\n");
+        script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
-        script.append("      label: 'Failed Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(tplSpecFailureValues)).append(",\n");
-        script.append("      backgroundColor: '#dc2626',\n");
+        script.append("      label: 'Non GCC',\n");
+        script.append("      data: [").append(tplSpecNonGccSuccess).append(',').append(tplSpecNonGccFailure).append("],\n");
+        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const compSpecLabels = ").append(toJsStringArray(compSpecLabels)).append(";\n");
-        script.append("  const compSpecSuccessData = {\n");
-        script.append("    labels: compSpecLabels,\n");
+        script.append("  const compSpecGccData = {\n");
+        script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
-        script.append("      label: 'Successful Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(compSpecSuccessValues)).append(",\n");
-        script.append("      backgroundColor: '#16a34a',\n");
+        script.append("      label: 'GCC',\n");
+        script.append("      data: [").append(compSpecGccSuccess).append(',').append(compSpecGccFailure).append("],\n");
+        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const compSpecFailureData = {\n");
-        script.append("    labels: compSpecLabels,\n");
+        script.append("  const compSpecNonGccData = {\n");
+        script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
-        script.append("      label: 'Failed Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(compSpecFailureValues)).append(",\n");
-        script.append("      backgroundColor: '#dc2626',\n");
+        script.append("      label: 'Non GCC',\n");
+        script.append("      data: [").append(compSpecNonGccSuccess).append(',').append(compSpecNonGccFailure).append("],\n");
+        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
@@ -996,12 +1072,12 @@ public class HtmlReportGenerator {
         script.append("  new Chart(document.getElementById('compUniqueChassisChart'), { type: 'bar', data: compUniqueChassisData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodySuccessChart'), { type: 'bar', data: tplBodySuccessData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodyFailureChart'), { type: 'bar', data: tplBodyFailureData, options: sharedOptions });\n");
-        script.append("  new Chart(document.getElementById('tplSpecSuccessChart'), { type: 'bar', data: tplSpecSuccessData, options: sharedOptions });\n");
-        script.append("  new Chart(document.getElementById('tplSpecFailureChart'), { type: 'bar', data: tplSpecFailureData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplSpecGccChart'), { type: 'bar', data: tplSpecGccData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplSpecNonGccChart'), { type: 'bar', data: tplSpecNonGccData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compBodySuccessChart'), { type: 'bar', data: compBodySuccessData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compBodyFailureChart'), { type: 'bar', data: compBodyFailureData, options: sharedOptions });\n");
-        script.append("  new Chart(document.getElementById('compSpecSuccessChart'), { type: 'bar', data: compSpecSuccessData, options: sharedOptions });\n");
-        script.append("  new Chart(document.getElementById('compSpecFailureChart'), { type: 'bar', data: compSpecFailureData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compSpecGccChart'), { type: 'bar', data: compSpecGccData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compSpecNonGccChart'), { type: 'bar', data: compSpecNonGccData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplAgeRatioChart'), {\n");
         script.append("    type: 'line',\n");
         script.append("    data: tplAgeRatioData,\n");
