@@ -18,6 +18,7 @@ public class QuoteGroupStats {
     private final long totalQuotes;
     private final long passCount;
     private final long failCount;
+    private final long skipCount;
     private final double failurePercentage;
     private final Map<String, Long> failureReasonCounts;
     private final Map<String, Long> failuresByManufactureYear;
@@ -27,6 +28,7 @@ public class QuoteGroupStats {
                            long totalQuotes,
                            long passCount,
                            long failCount,
+                           long skipCount,
                            double failurePercentage,
                            Map<String, Long> failureReasonCounts,
                            Map<String, Long> failuresByManufactureYear,
@@ -35,6 +37,7 @@ public class QuoteGroupStats {
         this.totalQuotes = totalQuotes;
         this.passCount = passCount;
         this.failCount = failCount;
+        this.skipCount = skipCount;
         this.failurePercentage = failurePercentage;
         this.failureReasonCounts = Collections.unmodifiableMap(new LinkedHashMap<>(failureReasonCounts));
         this.failuresByManufactureYear = Collections.unmodifiableMap(new LinkedHashMap<>(failuresByManufactureYear));
@@ -42,7 +45,7 @@ public class QuoteGroupStats {
     }
 
     public static QuoteGroupStats empty(GroupType groupType) {
-        return new QuoteGroupStats(groupType, 0, 0, 0, 0.0,
+        return new QuoteGroupStats(groupType, 0, 0, 0, 0, 0.0,
                 Collections.emptyMap(), Collections.emptyMap(), BigDecimal.ZERO);
     }
 
@@ -60,6 +63,10 @@ public class QuoteGroupStats {
 
     public long getFailCount() {
         return failCount;
+    }
+
+    public long getSkipCount() {
+        return skipCount;
     }
 
     public double getFailurePercentage() {

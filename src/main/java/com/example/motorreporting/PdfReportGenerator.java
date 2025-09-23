@@ -22,7 +22,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -48,19 +47,15 @@ public class PdfReportGenerator {
                 document.open();
 
                 addTitlePage(document);
-                addOverallSummary(document, statistics);
-                addSummaryChart(document, statistics);
-                addSpacing(document);
+                addGroupPart(document,
+                        "Part 1 - " + statistics.getTplStats().getGroupType().getDisplayName(),
+                        statistics.getTplStats());
 
-                addGroupSection(document, statistics.getTplStats());
-                addSpacing(document);
-                addGroupSection(document, statistics.getComprehensiveStats());
-                addSpacing(document);
+                document.newPage();
 
-                addFailureByYearChart(document, statistics);
-                addSpacing(document);
-
-                addRecommendations(document, statistics);
+                addGroupPart(document,
+                        "Part 2 - " + statistics.getComprehensiveStats().getGroupType().getDisplayName(),
+                        statistics.getComprehensiveStats());
             } finally {
                 if (document.isOpen()) {
                     document.close();
@@ -82,34 +77,11 @@ public class PdfReportGenerator {
         addSpacing(document);
     }
 
-    private void addOverallSummary(Document document, QuoteStatistics statistics) throws DocumentException {
-        Paragraph header = new Paragraph("Overall Summary", SECTION_FONT);
+    private void addGroupPart(Document document, String partTitle, QuoteGroupStats stats)
+            throws DocumentException, IOException {
+        Paragraph header = new Paragraph(partTitle, SECTION_FONT);
         document.add(header);
-
-        PdfPTable table = new PdfPTable(new float[]{3f, 2f});
-        table.setWidthPercentage(100);
-        table.setSpacingBefore(8f);
-        table.addCell(createHeaderCell("Metric"));
-        table.addCell(createHeaderCell("Value"));
-
-        table.addCell(createValueCell("Total Quotes"));
-        table.addCell(createValueCell(INTEGER_FORMAT.format(statistics.getOverallTotalQuotes())));
-        table.addCell(createValueCell("Pass Count"));
-        table.addCell(createValueCell(INTEGER_FORMAT.format(statistics.getOverallPassCount())));
-        table.addCell(createValueCell("Fail Count"));
-        table.addCell(createValueCell(INTEGER_FORMAT.format(statistics.getOverallFailCount())));
-        table.addCell(createValueCell("Failure %"));
-        table.addCell(createValueCell(PERCENT_FORMAT.format(statistics.getOverallFailurePercentage())));
-        table.addCell(createValueCell("Blocked Estimated Value"));
-        table.addCell(createValueCell(CURRENCY_FORMAT.format(statistics.getOverallBlockedEstimatedValue())));
-
-        document.add(table);
         addSpacing(document);
-    }
-
-    private void addGroupSection(Document document, QuoteGroupStats stats) throws DocumentException, IOException {
-        Paragraph header = new Paragraph(stats.getGroupType().getDisplayName(), SECTION_FONT);
-        document.add(header);
 
         if (!stats.hasQuotes()) {
             Paragraph empty = new Paragraph("No quotes found for this group.", NORMAL_FONT);
@@ -125,10 +97,12 @@ public class PdfReportGenerator {
 
         metrics.addCell(createValueCell("Total Quotes"));
         metrics.addCell(createValueCell(INTEGER_FORMAT.format(stats.getTotalQuotes())));
-        metrics.addCell(createValueCell("Pass Count"));
+        metrics.addCell(createValueCell("Success Count"));
         metrics.addCell(createValueCell(INTEGER_FORMAT.format(stats.getPassCount())));
-        metrics.addCell(createValueCell("Fail Count"));
+        metrics.addCell(createValueCell("Failure Count"));
         metrics.addCell(createValueCell(INTEGER_FORMAT.format(stats.getFailCount())));
+        metrics.addCell(createValueCell("Skipped Count"));
+        metrics.addCell(createValueCell(INTEGER_FORMAT.format(stats.getSkipCount())));
         metrics.addCell(createValueCell("Failure %"));
         metrics.addCell(createValueCell(PERCENT_FORMAT.format(stats.getFailurePercentage())));
         metrics.addCell(createValueCell("Blocked Estimated Value"));
@@ -164,46 +138,17 @@ public class PdfReportGenerator {
         document.add(pieHeader);
         addSpacing(document);
 
-        JFreeChart chart = ChartCreator.createFailureReasonPieChart(stats);
-        addChart(document, chart, 480, 320);
-        addSpacing(document);
-    }
-
-    private void addSummaryChart(Document document, QuoteStatistics statistics) throws DocumentException, IOException {
-        Paragraph header = new Paragraph("KPI Summary", SUBTITLE_FONT);
-        document.add(header);
+        JFreeChart pieChart = ChartCreator.createFailureReasonPieChart(stats);
+        addChart(document, pieChart, 480, 320);
         addSpacing(document);
 
-        JFreeChart chart = ChartCreator.createKpiSummaryChart(statistics);
-        addChart(document, chart, 520, 320);
-    }
-
-    private void addFailureByYearChart(Document document, QuoteStatistics statistics) throws DocumentException, IOException {
-        Paragraph header = new Paragraph("Failures by Manufacture Year", SECTION_FONT);
-        document.add(header);
+        Paragraph yearHeader = new Paragraph("Failures by Manufacture Year", SUBTITLE_FONT);
+        document.add(yearHeader);
         addSpacing(document);
 
-        JFreeChart chart = ChartCreator.createFailureByYearBarChart(statistics.getTplStats(), statistics.getComprehensiveStats());
-        addChart(document, chart, 520, 320);
-    }
-
-    private void addRecommendations(Document document, QuoteStatistics statistics) throws DocumentException {
-        Paragraph header = new Paragraph("Recommendations", SECTION_FONT);
-        document.add(header);
-
-        List<Map.Entry<String, Long>> topReasons = statistics.getTopFailureReasons(3);
-        if (topReasons.isEmpty()) {
-            document.add(new Paragraph("No failures detected. Continue monitoring the process.", NORMAL_FONT));
-            return;
-        }
-
-        com.lowagie.text.List list = new com.lowagie.text.List(com.lowagie.text.List.UNORDERED);
-        for (Map.Entry<String, Long> entry : topReasons) {
-            String text = String.format("%s (%,d occurrences) - Investigate root causes and prioritize corrective actions.",
-                    entry.getKey(), entry.getValue());
-            list.add(new com.lowagie.text.ListItem(new Phrase(text, NORMAL_FONT)));
-        }
-        document.add(list);
+        JFreeChart yearChart = ChartCreator.createFailureByYearBarChart(stats);
+        addChart(document, yearChart, 520, 320);
+        addSpacing(document);
     }
 
     private PdfPCell createHeaderCell(String text) {

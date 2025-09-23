@@ -3,7 +3,6 @@ package com.example.motorreporting;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -12,13 +11,11 @@ import java.util.Optional;
  */
 public class QuoteRecord {
 
-    private static final String STATUS_SUCCESS = "pass";
-    private static final String STATUS_SUCCESS_ALT = "success";
-
     private final Map<String, String> rawValues;
     private final String insuranceType;
     private final String status;
     private final String errorText;
+    private final String quoteNumber;
     private final Integer manufactureYear;
     private final BigDecimal estimatedValue;
 
@@ -27,13 +24,15 @@ public class QuoteRecord {
                         String status,
                         String errorText,
                         Integer manufactureYear,
-                        BigDecimal estimatedValue) {
+                        BigDecimal estimatedValue,
+                        String quoteNumber) {
         this.rawValues = Collections.unmodifiableMap(new HashMap<>(rawValues));
         this.insuranceType = insuranceType;
         this.status = status;
         this.errorText = errorText;
         this.manufactureYear = manufactureYear;
         this.estimatedValue = estimatedValue;
+        this.quoteNumber = quoteNumber;
     }
 
     public static QuoteRecord fromValues(Map<String, String> values) {
@@ -44,13 +43,41 @@ public class QuoteRecord {
             }
         });
 
-        String insuranceType = normalized.getOrDefault("InsuranceType", "");
-        String status = normalized.getOrDefault("Status", "");
-        String errorText = normalized.getOrDefault("ErrorText", "");
-        Integer manufactureYear = parseInteger(normalized.get("ManufactureYear"));
-        BigDecimal estimatedValue = parseBigDecimal(normalized.get("EstimatedValue"));
+        String insuranceType = getValueIgnoreCase(normalized, "InsuranceType");
+        String status = getValueIgnoreCase(normalized, "Status");
+        String errorText = getValueIgnoreCase(normalized, "ErrorText");
+        Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
+        BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
+        String quoteNumber = extractQuoteNumber(normalized);
 
-        return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue);
+        return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue, quoteNumber);
+    }
+
+    private static String getValueIgnoreCase(Map<String, String> values, String key) {
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            if (entry.getKey() != null && entry.getKey().equalsIgnoreCase(key)) {
+                return entry.getValue();
+            }
+        }
+        return "";
+    }
+
+    private static String extractQuoteNumber(Map<String, String> values) {
+        String[] possibleKeys = {
+                "QuotationNo",
+                "QuotationNumber",
+                "QuoteNumber",
+                "QuoteNo",
+                "Quote #",
+                "Quotation #"
+        };
+        for (String key : possibleKeys) {
+            String value = getValueIgnoreCase(values, key);
+            if (value != null && !value.isBlank()) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 
     private static Integer parseInteger(String value) {
@@ -81,11 +108,15 @@ public class QuoteRecord {
     }
 
     public boolean isSuccessful() {
-        if (status == null) {
-            return false;
-        }
-        String normalized = status.trim().toLowerCase(Locale.ROOT);
-        return STATUS_SUCCESS.equals(normalized) || STATUS_SUCCESS_ALT.equals(normalized);
+        return !hasError() && hasQuoteNumber();
+    }
+
+    public boolean isFailure() {
+        return hasError();
+    }
+
+    public boolean isSkipped() {
+        return !hasError() && !hasQuoteNumber();
     }
 
     public String getFailureReason() {
@@ -101,6 +132,18 @@ public class QuoteRecord {
 
     public BigDecimal getEstimatedValue() {
         return estimatedValue;
+    }
+
+    public Optional<String> getQuoteNumber() {
+        return Optional.ofNullable(quoteNumber);
+    }
+
+    public boolean hasQuoteNumber() {
+        return quoteNumber != null && !quoteNumber.isBlank();
+    }
+
+    public boolean hasError() {
+        return errorText != null && !errorText.isBlank();
     }
 
     public String getInsuranceType() {
