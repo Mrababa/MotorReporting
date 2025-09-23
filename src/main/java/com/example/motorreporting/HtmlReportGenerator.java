@@ -187,6 +187,12 @@ public class HtmlReportGenerator {
         html.append("            padding: 1.5rem 1.75rem;\n");
         html.append("            box-shadow: 0 20px 45px -20px rgba(15, 23, 42, 0.28);\n");
         html.append("        }\n");
+        html.append("        .chart-card.chart-card--wide {\n");
+        html.append("            grid-column: 1 / -1;\n");
+        html.append("        }\n");
+        html.append("        .chart-card.chart-card--wide canvas {\n");
+        html.append("            height: 420px;\n");
+        html.append("        }\n");
         html.append("        .chart-card h2 {\n");
         html.append("            margin: 0 0 1rem;\n");
         html.append("            font-size: 1.1rem;\n");
@@ -275,6 +281,9 @@ public class HtmlReportGenerator {
         html.append("            canvas {\n");
         html.append("                height: 260px;\n");
         html.append("            }\n");
+        html.append("            .chart-card.chart-card--wide canvas {\n");
+        html.append("                height: 320px;\n");
+        html.append("            }\n");
         html.append("        }\n");
         html.append("    </style>\n");
         html.append("</head>\n");
@@ -326,11 +335,11 @@ public class HtmlReportGenerator {
         html.append("          <h2>Comprehensive Success vs Failed (Unique Chassis)</h2>\n");
         html.append("          <canvas id=\"compUniqueChassisChart\"></canvas>\n");
         html.append("        </div>\n");
-        html.append("        <div class=\"chart-card\">\n");
+        html.append("        <div class=\"chart-card chart-card--wide\">\n");
         html.append("          <h2>Manufacture Year Trend</h2>\n");
         html.append("          <canvas id=\"overallManufactureYearChart\"></canvas>\n");
         html.append("        </div>\n");
-        html.append("        <div class=\"chart-card\">\n");
+        html.append("        <div class=\"chart-card chart-card--wide\">\n");
         html.append("          <h2>Customer Age Trend</h2>\n");
         html.append("          <canvas id=\"overallCustomerAgeChart\"></canvas>\n");
         html.append("        </div>\n");
@@ -340,8 +349,6 @@ public class HtmlReportGenerator {
                 statistics.getUniqueChassisByInsurancePurpose());
         appendCategoryCountTable(html, "Unique Chassis by Body Type", "Body Type",
                 statistics.getUniqueChassisByBodyType());
-        appendMakeModelTable(html, "Top 20 Make & Model by Unique Chassis",
-                statistics.getTopRequestedMakeModelsByUniqueChassis());
         html.append("  </section>\n");
         html.append("  <section id=\"tpl-analysis\" class=\"page-section\">\n");
         html.append("    <div class=\"summary-section\">\n");
