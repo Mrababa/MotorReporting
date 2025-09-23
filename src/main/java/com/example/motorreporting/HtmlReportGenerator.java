@@ -326,8 +326,22 @@ public class HtmlReportGenerator {
         html.append("          <h2>Comprehensive Success vs Failed (Unique Chassis)</h2>\n");
         html.append("          <canvas id=\"compUniqueChassisChart\"></canvas>\n");
         html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Manufacture Year Trend</h2>\n");
+        html.append("          <canvas id=\"overallManufactureYearChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Customer Age Trend</h2>\n");
+        html.append("          <canvas id=\"overallCustomerAgeChart\"></canvas>\n");
+        html.append("        </div>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
+        appendCategoryCountTable(html, "Unique Chassis by Insurance Purpose", "Insurance Purpose",
+                statistics.getUniqueChassisByInsurancePurpose());
+        appendCategoryCountTable(html, "Unique Chassis by Body Type", "Body Type",
+                statistics.getUniqueChassisByBodyType());
+        appendMakeModelTable(html, "Top 20 Make & Model by Unique Chassis",
+                statistics.getTopRequestedMakeModelsByUniqueChassis());
         html.append("  </section>\n");
         html.append("  <section id=\"tpl-analysis\" class=\"page-section\">\n");
         html.append("    <div class=\"summary-section\">\n");
@@ -705,6 +719,44 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
+    private void appendCategoryCountTable(StringBuilder html,
+                                          String heading,
+                                          String labelHeader,
+                                          List<QuoteStatistics.CategoryCount> counts) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        if (counts.isEmpty()) {
+            html.append("      <p class=\"empty-state\">No data recorded.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">")
+                .append(escapeHtml(labelHeader))
+                .append("</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Unique Chassis</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        for (QuoteStatistics.CategoryCount count : counts) {
+            html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(count.getLabel()))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(count.getCount())))
+                    .append("</td>\n");
+            html.append("          </tr>\n");
+        }
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
     private void appendModelChassisTable(StringBuilder html,
                                           String heading,
                                           List<QuoteStatistics.ModelChassisSummary> models) {
@@ -727,6 +779,45 @@ public class HtmlReportGenerator {
         html.append("        <tbody>\n");
         for (QuoteStatistics.ModelChassisSummary summary : models) {
             html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(summary.getModel()))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(summary.getUniqueChassisCount())))
+                    .append("</td>\n");
+            html.append("          </tr>\n");
+        }
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
+    private void appendMakeModelTable(StringBuilder html,
+                                      String heading,
+                                      List<QuoteStatistics.MakeModelChassisSummary> data) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        if (data.isEmpty()) {
+            html.append("      <p class=\"empty-state\">No make and model information available.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">Make</th>\n");
+        html.append("            <th scope=\"col\">Model</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Unique Chassis Count</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        for (QuoteStatistics.MakeModelChassisSummary summary : data) {
+            html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(summary.getMake()))
+                    .append("</td>\n");
             html.append("            <td>")
                     .append(escapeHtml(summary.getModel()))
                     .append("</td>\n");
@@ -792,6 +883,8 @@ public class HtmlReportGenerator {
         List<QuoteStatistics.ManufactureYearStats> compManufactureYearStats =
                 statistics.getComprehensiveManufactureYearStats();
         List<QuoteStatistics.ValueRangeStats> compValueStats = statistics.getComprehensiveEstimatedValueStats();
+        List<QuoteStatistics.CategoryCount> overallManufactureYearTrend = statistics.getManufactureYearTrend();
+        List<QuoteStatistics.CategoryCount> overallCustomerAgeTrend = statistics.getCustomerAgeTrend();
 
         QuoteStatistics.OutcomeBreakdown tplGccBreakdown =
                 tplSpecSummary.getOrDefault(SPEC_GCC_LABEL, EMPTY_OUTCOME);
@@ -917,6 +1010,30 @@ public class HtmlReportGenerator {
             }
         }
 
+        List<String> overallManufactureYearLabels = new ArrayList<>();
+        List<Long> overallManufactureYearCounts = new ArrayList<>();
+        if (overallManufactureYearTrend.isEmpty()) {
+            overallManufactureYearLabels.add("No Data");
+            overallManufactureYearCounts.add(0L);
+        } else {
+            for (QuoteStatistics.CategoryCount point : overallManufactureYearTrend) {
+                overallManufactureYearLabels.add(point.getLabel());
+                overallManufactureYearCounts.add(point.getCount());
+            }
+        }
+
+        List<String> overallCustomerAgeLabels = new ArrayList<>();
+        List<Long> overallCustomerAgeCounts = new ArrayList<>();
+        if (overallCustomerAgeTrend.isEmpty()) {
+            overallCustomerAgeLabels.add("No Data");
+            overallCustomerAgeCounts.add(0L);
+        } else {
+            for (QuoteStatistics.CategoryCount point : overallCustomerAgeTrend) {
+                overallCustomerAgeLabels.add(point.getLabel());
+                overallCustomerAgeCounts.add(point.getCount());
+            }
+        }
+
         StringBuilder script = new StringBuilder();
         script.append("<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>\n");
         script.append("<script>\n");
@@ -939,6 +1056,12 @@ public class HtmlReportGenerator {
         script.append("    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => `${value}%` } } },\n");
         script.append("    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } } }\n");
         script.append("  };\n");
+        script.append("  const trendLineOptions = {\n");
+        script.append("    responsive: true,\n");
+        script.append("    interaction: { mode: 'index', intersect: false },\n");
+        script.append("    scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString() } } },\n");
+        script.append("    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}` } } }\n");
+        script.append("  };\n");
         script.append("  const tplData = {\n");
         script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
@@ -955,6 +1078,28 @@ public class HtmlReportGenerator {
         script.append("      data: [").append(compStats.getPassCount()).append(',').append(compStats.getFailCount()).append("],\n");
         script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const overallManufactureYearData = {\n");
+        script.append("    labels: ").append(toJsStringArray(overallManufactureYearLabels)).append(",\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Quotes',\n");
+        script.append("      data: ").append(toJsNumberArray(overallManufactureYearCounts)).append(",\n");
+        script.append("      borderColor: '#2563eb',\n");
+        script.append("      backgroundColor: 'rgba(37, 99, 235, 0.15)',\n");
+        script.append("      tension: 0.35,\n");
+        script.append("      fill: true\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const overallCustomerAgeData = {\n");
+        script.append("    labels: ").append(toJsStringArray(overallCustomerAgeLabels)).append(",\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Quotes',\n");
+        script.append("      data: ").append(toJsNumberArray(overallCustomerAgeCounts)).append(",\n");
+        script.append("      borderColor: '#f97316',\n");
+        script.append("      backgroundColor: 'rgba(249, 115, 22, 0.15)',\n");
+        script.append("      tension: 0.35,\n");
+        script.append("      fill: true\n");
         script.append("    }]\n");
         script.append("  };\n");
         script.append("  const tplUniqueChassisData = {\n");
@@ -1190,6 +1335,16 @@ public class HtmlReportGenerator {
         script.append("    type: 'line',\n");
         script.append("    data: compEstimatedValueData,\n");
         script.append("    options: ratioChartOptions\n");
+        script.append("  });\n");
+        script.append("  new Chart(document.getElementById('overallManufactureYearChart'), {\n");
+        script.append("    type: 'line',\n");
+        script.append("    data: overallManufactureYearData,\n");
+        script.append("    options: trendLineOptions\n");
+        script.append("  });\n");
+        script.append("  new Chart(document.getElementById('overallCustomerAgeChart'), {\n");
+        script.append("    type: 'line',\n");
+        script.append("    data: overallCustomerAgeData,\n");
+        script.append("    options: trendLineOptions\n");
         script.append("  });\n");
         script.append("  document.querySelectorAll('.nav-button').forEach(button => {\n");
         script.append("    button.addEventListener('click', () => {\n");

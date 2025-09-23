@@ -27,6 +27,7 @@ public final class QuoteStatisticsCalculator {
     }
 
     private static final int TOP_REJECTED_MODEL_LIMIT = 10;
+    private static final int TOP_REQUESTED_MAKE_MODEL_LIMIT = 20;
 
     public static QuoteStatistics calculate(List<QuoteRecord> records) {
         Objects.requireNonNull(records, "records");
@@ -63,6 +64,16 @@ public final class QuoteStatisticsCalculator {
         Map<String, Long> compErrorCounts = computeErrorCounts(compRecords, true);
         List<QuoteStatistics.ModelChassisSummary> tplTopRejectedModels =
                 computeTopRejectedModelsByUniqueChassis(tplRecords, TOP_REJECTED_MODEL_LIMIT);
+        List<QuoteStatistics.MakeModelChassisSummary> topRequestedMakeModels =
+                computeTopMakeModelByUniqueChassis(records, TOP_REQUESTED_MAKE_MODEL_LIMIT);
+        List<QuoteStatistics.CategoryCount> uniqueChassisByInsurancePurpose =
+                computeUniqueChassisCounts(records, QuoteRecord::getInsurancePurposeLabel);
+        List<QuoteStatistics.CategoryCount> uniqueChassisByBodyType =
+                computeUniqueChassisCounts(records, QuoteRecord::getBodyCategoryLabel);
+        List<QuoteStatistics.CategoryCount> manufactureYearTrend =
+                computeManufactureYearTrend(records);
+        List<QuoteStatistics.CategoryCount> customerAgeTrend =
+                computeCustomerAgeTrend(records);
         return new QuoteStatistics(tplStats, compStats,
                 uniqueChassisSummary.getTotal(),
                 uniqueChassisSummary.getSuccessCount(),
@@ -81,8 +92,13 @@ public final class QuoteStatisticsCalculator {
                 compManufactureYearStats,
                 compEstimatedValueStats,
                 tplTopRejectedModels,
+                topRequestedMakeModels,
                 tplErrorCounts,
-                compErrorCounts);
+                compErrorCounts,
+                uniqueChassisByInsurancePurpose,
+                uniqueChassisByBodyType,
+                manufactureYearTrend,
+                customerAgeTrend);
     }
 
     private static QuoteGroupStats buildStats(GroupType groupType, List<QuoteRecord> records) {
@@ -272,6 +288,124 @@ public final class QuoteStatisticsCalculator {
                 .collect(Collectors.toList());
     }
 
+    private static List<QuoteStatistics.MakeModelChassisSummary> computeTopMakeModelByUniqueChassis(
+            List<QuoteRecord> records,
+            int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        Map<MakeModelKey, Set<String>> chassisByMakeModel = new HashMap<>();
+        for (QuoteRecord record : records) {
+            Optional<String> chassisOptional = record.getChassisNumber();
+            if (chassisOptional.isEmpty()) {
+                continue;
+            }
+            String make = record.getMakeLabel();
+            String model = record.getModelLabel();
+            MakeModelKey key = new MakeModelKey(make, model);
+            Set<String> chassis = chassisByMakeModel.computeIfAbsent(key, ignored -> new LinkedHashSet<>());
+            chassis.add(chassisOptional.get());
+        }
+
+        List<QuoteStatistics.MakeModelChassisSummary> results = chassisByMakeModel.entrySet().stream()
+                .map(entry -> new QuoteStatistics.MakeModelChassisSummary(
+                        entry.getKey().make,
+                        entry.getKey().model,
+                        entry.getValue().size()))
+                .sorted(Comparator
+                        .comparingLong(QuoteStatistics.MakeModelChassisSummary::getUniqueChassisCount)
+                        .reversed()
+                        .thenComparing(QuoteStatistics.MakeModelChassisSummary::getMake)
+                        .thenComparing(QuoteStatistics.MakeModelChassisSummary::getModel))
+                .collect(Collectors.toList());
+
+        if (results.size() > limit) {
+            return new ArrayList<>(results.subList(0, limit));
+        }
+        return results;
+    }
+
+    private static List<QuoteStatistics.CategoryCount> computeUniqueChassisCounts(
+            List<QuoteRecord> records,
+            Function<QuoteRecord, String> classifier) {
+        List<QuoteStatistics.CategoryCount> counts = new ArrayList<>();
+        Map<String, Set<String>> uniqueChassis = new HashMap<>();
+        for (QuoteRecord record : records) {
+            Optional<String> chassisOptional = record.getChassisNumber();
+            if (chassisOptional.isEmpty()) {
+                continue;
+            }
+            String label = classifier.apply(record);
+            if (label == null || label.isBlank()) {
+                label = "Unknown";
+            }
+            Set<String> chassis = uniqueChassis.computeIfAbsent(label, ignored -> new LinkedHashSet<>());
+            chassis.add(chassisOptional.get());
+        }
+        for (Map.Entry<String, Set<String>> entry : uniqueChassis.entrySet()) {
+            counts.add(new QuoteStatistics.CategoryCount(entry.getKey(), entry.getValue().size()));
+        }
+        counts.sort(Comparator.comparingLong(QuoteStatistics.CategoryCount::getCount).reversed()
+                .thenComparing(QuoteStatistics.CategoryCount::getLabel));
+        if (counts.isEmpty()) {
+            counts.add(new QuoteStatistics.CategoryCount("No Data", 0));
+        }
+        return counts;
+    }
+
+    private static List<QuoteStatistics.CategoryCount> computeManufactureYearTrend(List<QuoteRecord> records) {
+        TreeMap<Integer, Long> counts = new TreeMap<>();
+        long unknownCount = 0L;
+        for (QuoteRecord record : records) {
+            Optional<Integer> manufactureYear = record.getManufactureYear();
+            if (manufactureYear.isPresent()) {
+                counts.merge(manufactureYear.get(), 1L, Long::sum);
+            } else {
+                unknownCount++;
+            }
+        }
+        List<QuoteStatistics.CategoryCount> results = new ArrayList<>();
+        for (Map.Entry<Integer, Long> entry : counts.entrySet()) {
+            results.add(new QuoteStatistics.CategoryCount(String.valueOf(entry.getKey()), entry.getValue()));
+        }
+        if (unknownCount > 0) {
+            results.add(new QuoteStatistics.CategoryCount("Unknown", unknownCount));
+        }
+        if (results.isEmpty()) {
+            results.add(new QuoteStatistics.CategoryCount("No Data", 0));
+        }
+        return results;
+    }
+
+    private static List<QuoteStatistics.CategoryCount> computeCustomerAgeTrend(List<QuoteRecord> records) {
+        TreeMap<Integer, Long> counts = new TreeMap<>();
+        long unknownCount = 0L;
+        for (QuoteRecord record : records) {
+            Optional<Integer> ageOptional = record.getDriverAge();
+            if (ageOptional.isPresent()) {
+                int age = ageOptional.get();
+                if (age > 0) {
+                    counts.merge(age, 1L, Long::sum);
+                } else {
+                    unknownCount++;
+                }
+            } else {
+                unknownCount++;
+            }
+        }
+        List<QuoteStatistics.CategoryCount> results = new ArrayList<>();
+        for (Map.Entry<Integer, Long> entry : counts.entrySet()) {
+            results.add(new QuoteStatistics.CategoryCount(String.valueOf(entry.getKey()), entry.getValue()));
+        }
+        if (unknownCount > 0) {
+            results.add(new QuoteStatistics.CategoryCount("Unknown", unknownCount));
+        }
+        if (results.isEmpty()) {
+            results.add(new QuoteStatistics.CategoryCount("No Data", 0));
+        }
+        return results;
+    }
+
     private static List<QuoteStatistics.ValueRangeStats> computeEstimatedValueRangeStats(List<QuoteRecord> records) {
         Map<ValueRange, OutcomeAccumulator> accumulatorByRange = new LinkedHashMap<>();
         for (ValueRange range : VALUE_RANGES) {
@@ -422,6 +556,33 @@ public final class QuoteStatisticsCalculator {
 
         private QuoteStatistics.ManufactureYearStats toManufactureYearStats(String label) {
             return new QuoteStatistics.ManufactureYearStats(label, success, failure);
+        }
+    }
+
+    private static final class MakeModelKey {
+        private final String make;
+        private final String model;
+
+        private MakeModelKey(String make, String model) {
+            this.make = make;
+            this.model = model;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof MakeModelKey)) {
+                return false;
+            }
+            MakeModelKey other = (MakeModelKey) obj;
+            return Objects.equals(make, other.make) && Objects.equals(model, other.model);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(make, model);
         }
     }
 

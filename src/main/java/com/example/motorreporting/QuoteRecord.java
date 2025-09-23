@@ -17,6 +17,7 @@ public class QuoteRecord {
     private final Map<String, String> rawValues;
     private final String insuranceType;
     private final String status;
+    private final String insurancePurpose;
     private final String errorText;
     private final String quoteNumber;
     private final Integer manufactureYear;
@@ -26,11 +27,13 @@ public class QuoteRecord {
     private final String bodyCategory;
     private final String overrideSpecification;
     private final String model;
+    private final String make;
     private final Integer driverAge;
 
     private QuoteRecord(Map<String, String> rawValues,
                         String insuranceType,
                         String status,
+                        String insurancePurpose,
                         String errorText,
                         Integer manufactureYear,
                         BigDecimal estimatedValue,
@@ -40,10 +43,12 @@ public class QuoteRecord {
                         String bodyCategory,
                         String overrideSpecification,
                         Integer driverAge,
-                        String model) {
+                        String model,
+                        String make) {
         this.rawValues = Collections.unmodifiableMap(new HashMap<>(rawValues));
         this.insuranceType = insuranceType;
         this.status = status;
+        this.insurancePurpose = insurancePurpose;
         this.errorText = errorText;
         this.manufactureYear = manufactureYear;
         this.estimatedValue = estimatedValue;
@@ -52,8 +57,9 @@ public class QuoteRecord {
         this.outcome = Objects.requireNonNull(outcome, "outcome");
         this.bodyCategory = bodyCategory;
         this.overrideSpecification = overrideSpecification;
-        this.driverAge = driverAge;
         this.model = model;
+        this.make = make;
+        this.driverAge = driverAge;
     }
 
     public static QuoteRecord fromValues(Map<String, String> values) {
@@ -75,6 +81,7 @@ public class QuoteRecord {
 
         String insuranceType = getValueIgnoreCase(normalized, "InsuranceType");
         String status = outcome.getDisplayLabel();
+        String insurancePurpose = normalizeCategoricalValue(getValueIgnoreCase(normalized, "InsurancePurpose"));
         Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
         String quoteNumber = extractQuoteNumber(normalized);
@@ -83,9 +90,10 @@ public class QuoteRecord {
         String overrideSpec = normalizeCategoricalValue(getValueIgnoreCase(normalized, "OverrideIsGccSpec"));
         Integer driverAge = parseInteger(getValueIgnoreCase(normalized, "Age"));
         String model = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ShoryModelEn"));
+        String make = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ShoryMakeEn"));
 
-        return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue,
-                quoteNumber, chassisNumber, outcome, bodyCategory, overrideSpec, driverAge, model);
+        return new QuoteRecord(normalized, insuranceType, status, insurancePurpose, errorText, manufactureYear, estimatedValue,
+                quoteNumber, chassisNumber, outcome, bodyCategory, overrideSpec, driverAge, model, make);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
@@ -316,6 +324,14 @@ public class QuoteRecord {
         return status;
     }
 
+    public Optional<String> getInsurancePurpose() {
+        return Optional.ofNullable(insurancePurpose);
+    }
+
+    public String getInsurancePurposeLabel() {
+        return labelOrUnknown(insurancePurpose);
+    }
+
     public Map<String, String> getRawValues() {
         return rawValues;
     }
@@ -342,6 +358,14 @@ public class QuoteRecord {
 
     public String getModelLabel() {
         return labelOrUnknown(model);
+    }
+
+    public Optional<String> getMake() {
+        return Optional.ofNullable(make);
+    }
+
+    public String getMakeLabel() {
+        return labelOrUnknown(make);
     }
 
     public Optional<Integer> getDriverAge() {
