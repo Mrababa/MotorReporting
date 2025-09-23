@@ -59,6 +59,9 @@ public class HtmlReportGenerator {
         long totalQuotes = statistics.getOverallTotalQuotes();
         long successCount = statistics.getOverallPassCount();
         long failCount = statistics.getOverallFailCount();
+        long uniqueChassisTotal = statistics.getUniqueChassisCount();
+        long uniqueChassisSuccess = statistics.getUniqueChassisSuccessCount();
+        long uniqueChassisFail = statistics.getUniqueChassisFailCount();
         String headerText = buildHeaderText(records);
 
         StringBuilder html = new StringBuilder();
@@ -109,6 +112,15 @@ public class HtmlReportGenerator {
         html.append("            display: grid;\n");
         html.append("            gap: 1.5rem;\n");
         html.append("            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));\n");
+        html.append("        }\n");
+        html.append("        .summary-section {\n");
+        html.append("            margin-top: 3rem;\n");
+        html.append("        }\n");
+        html.append("        .section-title {\n");
+        html.append("            margin: 0 0 1.5rem;\n");
+        html.append("            font-size: 1.35rem;\n");
+        html.append("            font-weight: 700;\n");
+        html.append("            color: #0d1b3e;\n");
         html.append("        }\n");
         html.append("        .summary-card {\n");
         html.append("            background: #ffffff;\n");
@@ -193,6 +205,14 @@ public class HtmlReportGenerator {
         appendSummaryCard(html, "Successful Quotes", successCount, "#16a34a");
         appendSummaryCard(html, "Failed Quotes", failCount, "#dc2626");
         html.append("  </section>\n");
+        html.append("  <section class=\"summary-section\">\n");
+        html.append("    <h2 class=\"section-title\">Unique Chassis Overview</h2>\n");
+        html.append("    <div class=\"summary-grid\">\n");
+        appendSummaryCard(html, "Unique Chassis Requested", uniqueChassisTotal, "#2563eb");
+        appendSummaryCard(html, "Unique Chassis Success", uniqueChassisSuccess, "#16a34a");
+        appendSummaryCard(html, "Unique Chassis Failed", uniqueChassisFail, "#dc2626");
+        html.append("    </div>\n");
+        html.append("  </section>\n");
         html.append("  <section class=\"charts\">\n");
         html.append("    <div class=\"chart-grid\">\n");
         html.append("      <div class=\"chart-card\">\n");
@@ -203,10 +223,14 @@ public class HtmlReportGenerator {
         html.append("        <h2>Comprehensive Success vs Failed</h2>\n");
         html.append("        <canvas id=\"compOutcomesChart\"></canvas>\n");
         html.append("      </div>\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Unique Chassis Outcomes</h2>\n");
+        html.append("        <canvas id=\"uniqueChassisChart\"></canvas>\n");
+        html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("  </section>\n");
         html.append("</main>\n");
-        html.append(buildScripts(tplStats, compStats));
+        html.append(buildScripts(tplStats, compStats, uniqueChassisTotal, uniqueChassisSuccess, uniqueChassisFail));
         html.append("</body>\n");
         html.append("</html>\n");
         return html.toString();
@@ -341,7 +365,11 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
-    private String buildScripts(QuoteGroupStats tplStats, QuoteGroupStats compStats) {
+    private String buildScripts(QuoteGroupStats tplStats,
+                                QuoteGroupStats compStats,
+                                long uniqueChassisTotal,
+                                long uniqueChassisSuccess,
+                                long uniqueChassisFail) {
         StringBuilder script = new StringBuilder();
         script.append("<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>\n");
         script.append("<script>\n");
@@ -355,7 +383,7 @@ public class HtmlReportGenerator {
         script.append("    },\n");
         script.append("    plugins: {\n");
         script.append("      legend: { display: false },\n");
-        script.append("      tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw} quotes` } }\n");
+        script.append("      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}` } }\n");
         script.append("    }\n");
         script.append("  };\n");
         script.append("  const tplData = {\n");
@@ -376,6 +404,16 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
+        script.append("  const uniqueChassisData = {\n");
+        script.append("    labels: ['Total Unique', 'Success', 'Failed'],\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Unique chassis',\n");
+        script.append("      data: [").append(uniqueChassisTotal).append(',')
+                .append(uniqueChassisSuccess).append(',').append(uniqueChassisFail).append("],\n");
+        script.append("      backgroundColor: ['#2563eb', '#16a34a', '#dc2626'],\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
         script.append("  new Chart(document.getElementById('tplOutcomesChart'), {\n");
         script.append("    type: 'bar',\n");
         script.append("    data: tplData,\n");
@@ -384,6 +422,11 @@ public class HtmlReportGenerator {
         script.append("  new Chart(document.getElementById('compOutcomesChart'), {\n");
         script.append("    type: 'bar',\n");
         script.append("    data: compData,\n");
+        script.append("    options: sharedOptions\n");
+        script.append("  });\n");
+        script.append("  new Chart(document.getElementById('uniqueChassisChart'), {\n");
+        script.append("    type: 'bar',\n");
+        script.append("    data: uniqueChassisData,\n");
         script.append("    options: sharedOptions\n");
         script.append("  });\n");
         script.append("</script>\n");

@@ -16,10 +16,20 @@ public class QuoteStatistics {
 
     private final QuoteGroupStats tplStats;
     private final QuoteGroupStats comprehensiveStats;
+    private final long uniqueChassisCount;
+    private final long uniqueChassisSuccessCount;
+    private final long uniqueChassisFailCount;
 
-    public QuoteStatistics(QuoteGroupStats tplStats, QuoteGroupStats comprehensiveStats) {
+    public QuoteStatistics(QuoteGroupStats tplStats,
+                           QuoteGroupStats comprehensiveStats,
+                           long uniqueChassisCount,
+                           long uniqueChassisSuccessCount,
+                           long uniqueChassisFailCount) {
         this.tplStats = Objects.requireNonNull(tplStats, "tplStats");
         this.comprehensiveStats = Objects.requireNonNull(comprehensiveStats, "comprehensiveStats");
+        this.uniqueChassisCount = uniqueChassisCount;
+        this.uniqueChassisSuccessCount = uniqueChassisSuccessCount;
+        this.uniqueChassisFailCount = uniqueChassisFailCount;
     }
 
     public QuoteGroupStats getTplStats() {
@@ -40,6 +50,18 @@ public class QuoteStatistics {
 
     public long getOverallFailCount() {
         return tplStats.getFailCount() + comprehensiveStats.getFailCount();
+    }
+
+    public long getUniqueChassisCount() {
+        return uniqueChassisCount;
+    }
+
+    public long getUniqueChassisSuccessCount() {
+        return uniqueChassisSuccessCount;
+    }
+
+    public long getUniqueChassisFailCount() {
+        return uniqueChassisFailCount;
     }
 
     public long getOverallSkipCount() {
