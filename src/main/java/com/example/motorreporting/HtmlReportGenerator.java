@@ -15,6 +15,7 @@ import java.util.Objects;
  */
 public class HtmlReportGenerator {
 
+    private static final String LOGO_URL = "https://www.shory.com/imgs/master/logo.svg";
     private static final DecimalFormat INTEGER_FORMAT;
 
     static {
@@ -69,6 +70,12 @@ public class HtmlReportGenerator {
         html.append("        .page-header {\n");
         html.append("            text-align: center;\n");
         html.append("            margin-bottom: 3rem;\n");
+        html.append("        }\n");
+        html.append("        .company-logo {\n");
+        html.append("            width: clamp(140px, 18vw, 180px);\n");
+        html.append("            height: auto;\n");
+        html.append("            margin: 0 auto 1.75rem;\n");
+        html.append("            display: block;\n");
         html.append("        }\n");
         html.append("        .page-header h1 {\n");
         html.append("            margin: 0 0 0.75rem;\n");
@@ -157,6 +164,9 @@ public class HtmlReportGenerator {
         html.append("<body>\n");
         html.append("<main>\n");
         html.append("  <div class=\"page-header\">\n");
+        html.append("    <img src=\"")
+                .append(escapeHtml(LOGO_URL))
+                .append("\" alt=\"Shory company logo\" class=\"company-logo\" loading=\"lazy\">\n");
         html.append("    <h1>Motor Quote Summary</h1>\n");
         html.append("    <p>Overview of quote requests with pass and fail counts for each insurance type.</p>\n");
         html.append("  </div>\n");

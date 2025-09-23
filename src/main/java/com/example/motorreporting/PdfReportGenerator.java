@@ -1,5 +1,6 @@
 package com.example.motorreporting;
 
+import com.lowagie.text.BadElementException;
 import com.lowagie.text.Chunk;
 import com.lowagie.text.Document;
 import com.lowagie.text.DocumentException;
@@ -18,6 +19,7 @@ import java.awt.Color;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
@@ -37,6 +39,7 @@ public class PdfReportGenerator {
     private static final DecimalFormat INTEGER_FORMAT = new DecimalFormat("#,##0");
     private static final DecimalFormat PERCENT_FORMAT = new DecimalFormat("0.0'%'");
     private static final DecimalFormat CURRENCY_FORMAT = new DecimalFormat("#,##0.00");
+    private static final String LOGO_URL = "https://www.shory.com/imgs/master/logo.svg";
 
     public void generate(Path outputPath, QuoteStatistics statistics) throws IOException {
         Document document = new Document(PageSize.A4, 36, 36, 54, 36);
@@ -71,6 +74,7 @@ public class PdfReportGenerator {
     }
 
     private void addTitlePage(Document document) throws DocumentException {
+        addLogo(document);
         Paragraph title = new Paragraph("Quote Generation Report", TITLE_FONT);
         title.setAlignment(Element.ALIGN_CENTER);
         document.add(title);
@@ -78,6 +82,20 @@ public class PdfReportGenerator {
         Paragraph date = new Paragraph("Report Date: " + LocalDate.now(), NORMAL_FONT);
         date.setAlignment(Element.ALIGN_CENTER);
         document.add(date);
+        addSpacing(document);
+    }
+
+    private void addLogo(Document document) throws DocumentException {
+        try {
+            com.lowagie.text.Image logo = com.lowagie.text.Image.getInstance(new URL(LOGO_URL));
+            logo.scaleToFit(180, 70);
+            logo.setAlignment(Element.ALIGN_CENTER);
+            document.add(logo);
+        } catch (BadElementException | IOException ex) {
+            Paragraph fallback = new Paragraph("Shory", SUBTITLE_FONT);
+            fallback.setAlignment(Element.ALIGN_CENTER);
+            document.add(fallback);
+        }
         addSpacing(document);
     }
 
