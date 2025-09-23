@@ -35,6 +35,17 @@ java -jar target/motor-reporting-1.0-SNAPSHOT-jar-with-dependencies.jar /path/to
 The PDF is created in the same directory as the input file. For CSV inputs simply point
 the command at the `.csv` file.
 
+### Running from an IDE
+
+If you prefer to run the application from your IDE, use the `com.example.motorreporting.MotorReportingMain`
+class. Supply the input file name (for example `quotes_sample.csv`) as the program argument and the
+application will resolve it relative to the bundled `source data` directory.
+
+### Sample data
+
+A sample CSV file is included at `source data/quotes_sample.csv` so you can generate a report without
+providing your own data.
+
 ## Output
 
 The PDF report includes:
