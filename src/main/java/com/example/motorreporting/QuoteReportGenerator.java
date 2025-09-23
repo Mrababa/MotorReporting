@@ -68,11 +68,11 @@ public final class QuoteReportGenerator {
 
         QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(records);
         Path outputPath = inputPath.toAbsolutePath().getParent() != null
-                ? inputPath.toAbsolutePath().getParent().resolve("quote_generation_report.pdf")
-                : Paths.get("quote_generation_report.pdf");
+                ? inputPath.toAbsolutePath().getParent().resolve("quote_generation_report.html")
+                : Paths.get("quote_generation_report.html");
 
-        PdfReportGenerator pdfReportGenerator = new PdfReportGenerator();
-        pdfReportGenerator.generate(outputPath, statistics);
+        HtmlReportGenerator htmlReportGenerator = new HtmlReportGenerator();
+        htmlReportGenerator.generate(outputPath, statistics, records);
         return outputPath;
     }
 
