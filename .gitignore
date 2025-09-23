@@ -1,0 +1,9 @@
+/target/
+*.log
+*.iml
+.idea/
+.project
+.classpath
+.settings/
+.DS_Store
+quote_generation_report.pdf
