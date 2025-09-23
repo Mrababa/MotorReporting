@@ -23,6 +23,9 @@ public class QuoteRecord {
     private final BigDecimal estimatedValue;
     private final String chassisNumber;
     private final QuoteOutcome outcome;
+    private final String bodyCategory;
+    private final String overrideSpecification;
+    private final Integer driverAge;
 
     private QuoteRecord(Map<String, String> rawValues,
                         String insuranceType,
@@ -32,7 +35,10 @@ public class QuoteRecord {
                         BigDecimal estimatedValue,
                         String quoteNumber,
                         String chassisNumber,
-                        QuoteOutcome outcome) {
+                        QuoteOutcome outcome,
+                        String bodyCategory,
+                        String overrideSpecification,
+                        Integer driverAge) {
         this.rawValues = Collections.unmodifiableMap(new HashMap<>(rawValues));
         this.insuranceType = insuranceType;
         this.status = status;
@@ -42,6 +48,9 @@ public class QuoteRecord {
         this.quoteNumber = quoteNumber;
         this.chassisNumber = chassisNumber;
         this.outcome = Objects.requireNonNull(outcome, "outcome");
+        this.bodyCategory = bodyCategory;
+        this.overrideSpecification = overrideSpecification;
+        this.driverAge = driverAge;
     }
 
     public static QuoteRecord fromValues(Map<String, String> values) {
@@ -67,9 +76,12 @@ public class QuoteRecord {
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
         String quoteNumber = extractQuoteNumber(normalized);
         String chassisNumber = extractChassisNumber(normalized);
+        String bodyCategory = normalizeCategoricalValue(getValueIgnoreCase(normalized, "BodyCategory"));
+        String overrideSpec = normalizeCategoricalValue(getValueIgnoreCase(normalized, "OverrideIsGccSpec"));
+        Integer driverAge = parseInteger(getValueIgnoreCase(normalized, "Age"));
 
         return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue,
-                quoteNumber, chassisNumber, outcome);
+                quoteNumber, chassisNumber, outcome, bodyCategory, overrideSpec, driverAge);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
@@ -141,6 +153,17 @@ public class QuoteRecord {
         if (replacement != null) {
             setValueIgnoreCase(values, "OverrideIsGccSpec", replacement);
         }
+    }
+
+    private static String normalizeCategoricalValue(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty() || "null".equalsIgnoreCase(trimmed)) {
+            return null;
+        }
+        return trimmed;
     }
 
     private static boolean isNullLiteral(String value) {
@@ -291,6 +314,40 @@ public class QuoteRecord {
 
     public Map<String, String> getRawValues() {
         return rawValues;
+    }
+
+    public String getBodyCategory() {
+        return bodyCategory;
+    }
+
+    public String getBodyCategoryLabel() {
+        return labelOrUnknown(bodyCategory);
+    }
+
+    public String getOverrideSpecification() {
+        return overrideSpecification;
+    }
+
+    public String getOverrideSpecificationLabel() {
+        return labelOrUnknown(overrideSpecification);
+    }
+
+    public Optional<Integer> getDriverAge() {
+        return Optional.ofNullable(driverAge);
+    }
+
+    public Optional<String> getFailureErrorText() {
+        if (isNullLiteral(errorText)) {
+            return Optional.empty();
+        }
+        return Optional.of(errorText.trim());
+    }
+
+    private static String labelOrUnknown(String value) {
+        if (value == null || value.isEmpty()) {
+            return "Unknown";
+        }
+        return value;
     }
 
     private enum QuoteOutcome {

@@ -10,11 +10,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * Builds the simplified HTML quote report.
@@ -23,6 +26,7 @@ public class HtmlReportGenerator {
 
     private static final String LOGO_URL = "https://www.shory.com/imgs/master/logo.svg";
     private static final DecimalFormat INTEGER_FORMAT;
+    private static final DecimalFormat PERCENT_FORMAT;
     private static final DateTimeFormatter[] QUOTE_REQUESTED_ON_FORMATS = {
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US),
@@ -36,6 +40,7 @@ public class HtmlReportGenerator {
     static {
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
         INTEGER_FORMAT = new DecimalFormat("#,##0", symbols);
+        PERCENT_FORMAT = new DecimalFormat("#0.0%", symbols);
     }
 
     public void generate(Path outputPath, QuoteStatistics statistics, List<QuoteRecord> records) throws IOException {
@@ -178,6 +183,76 @@ public class HtmlReportGenerator {
         html.append("            font-weight: 700;\n");
         html.append("            color: #0d1b3e;\n");
         html.append("        }\n");
+        html.append("        .page-nav {\n");
+        html.append("            display: flex;\n");
+        html.append("            justify-content: center;\n");
+        html.append("            gap: 1rem;\n");
+        html.append("            flex-wrap: wrap;\n");
+        html.append("            margin-bottom: 2.5rem;\n");
+        html.append("        }\n");
+        html.append("        .nav-button {\n");
+        html.append("            border: none;\n");
+        html.append("            background: #e0e7ff;\n");
+        html.append("            color: #1e3a8a;\n");
+        html.append("            padding: 0.65rem 1.25rem;\n");
+        html.append("            border-radius: 999px;\n");
+        html.append("            font-weight: 600;\n");
+        html.append("            cursor: pointer;\n");
+        html.append("            transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;\n");
+        html.append("        }\n");
+        html.append("        .nav-button:hover {\n");
+        html.append("            background: #c7d2fe;\n");
+        html.append("        }\n");
+        html.append("        .nav-button.active {\n");
+        html.append("            background: #1e3a8a;\n");
+        html.append("            color: #ffffff;\n");
+        html.append("            box-shadow: 0 12px 30px -12px rgba(30, 58, 138, 0.6);\n");
+        html.append("        }\n");
+        html.append("        .page-section {\n");
+        html.append("            display: none;\n");
+        html.append("        }\n");
+        html.append("        .page-section.active {\n");
+        html.append("            display: block;\n");
+        html.append("        }\n");
+        html.append("        .table-card {\n");
+        html.append("            background: #ffffff;\n");
+        html.append("            border-radius: 18px;\n");
+        html.append("            padding: 1.5rem 1.75rem;\n");
+        html.append("            box-shadow: 0 20px 45px -20px rgba(15, 23, 42, 0.28);\n");
+        html.append("            margin-top: 2rem;\n");
+        html.append("            overflow-x: auto;\n");
+        html.append("        }\n");
+        html.append("        .table-card h3 {\n");
+        html.append("            margin: 0 0 1rem;\n");
+        html.append("            font-size: 1.1rem;\n");
+        html.append("            font-weight: 700;\n");
+        html.append("            color: #0d1b3e;\n");
+        html.append("        }\n");
+        html.append("        .table-card table {\n");
+        html.append("            width: 100%;\n");
+        html.append("            border-collapse: collapse;\n");
+        html.append("        }\n");
+        html.append("        .table-card th, .table-card td {\n");
+        html.append("            padding: 0.75rem 0.5rem;\n");
+        html.append("            border-bottom: 1px solid #e5e7eb;\n");
+        html.append("            text-align: left;\n");
+        html.append("            font-size: 0.95rem;\n");
+        html.append("        }\n");
+        html.append("        .table-card th {\n");
+        html.append("            font-weight: 600;\n");
+        html.append("            color: #0f172a;\n");
+        html.append("        }\n");
+        html.append("        .table-card tbody tr:last-child td {\n");
+        html.append("            border-bottom: none;\n");
+        html.append("        }\n");
+        html.append("        .numeric {\n");
+        html.append("            text-align: right;\n");
+        html.append("        }\n");
+        html.append("        .empty-state {\n");
+        html.append("            margin: 0;\n");
+        html.append("            font-style: italic;\n");
+        html.append("            color: #6b7280;\n");
+        html.append("        }\n");
         html.append("        canvas {\n");
         html.append("            width: 100%;\n");
         html.append("            max-width: 100%;\n");
@@ -204,43 +279,92 @@ public class HtmlReportGenerator {
                 .append("</h1>\n");
         html.append("    <p>Overview of quote requests with pass and fail counts for each insurance type.</p>\n");
         html.append("  </div>\n");
-        html.append("  <section class=\"summary-grid\">\n");
+        html.append("  <nav class=\"page-nav\">\n");
+        html.append("    <button type=\"button\" class=\"nav-button active\" data-target=\"overview\">Overview</button>\n");
+        html.append("    <button type=\"button\" class=\"nav-button\" data-target=\"tpl-analysis\">TPL Analysis</button>\n");
+        html.append("  </nav>\n");
+        html.append("  <section id=\"overview\" class=\"page-section active\">\n");
+        html.append("    <div class=\"summary-grid\">\n");
         appendSummaryCard(html, "Total Quotes Requested", totalQuotes, "#2563eb");
         appendSummaryCard(html, "Successful Quotes", successCount, "#16a34a");
         appendSummaryCard(html, "Failed Quotes", failCount, "#dc2626");
-        html.append("  </section>\n");
-        html.append("  <section class=\"summary-section\">\n");
-        html.append("    <h2 class=\"section-title\">Unique Chassis Overview</h2>\n");
-        html.append("    <div class=\"summary-grid\">\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"summary-section\">\n");
+        html.append("      <h2 class=\"section-title\">Unique Chassis Overview</h2>\n");
+        html.append("      <div class=\"summary-grid\">\n");
         appendSummaryCard(html, "Unique Chassis Requested", uniqueChassisTotal, "#2563eb");
         appendSummaryCard(html, "Unique Chassis Success", uniqueChassisSuccess, "#16a34a");
         appendSummaryCard(html, "Unique Chassis Failed", uniqueChassisFail, "#dc2626");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-grid\">\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>TPL Success vs Failed</h2>\n");
+        html.append("          <canvas id=\"tplOutcomesChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Comprehensive Success vs Failed</h2>\n");
+        html.append("          <canvas id=\"compOutcomesChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>TPL Success vs Failed (Unique Chassis)</h2>\n");
+        html.append("          <canvas id=\"tplUniqueChassisChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Comprehensive Success vs Failed (Unique Chassis)</h2>\n");
+        html.append("          <canvas id=\"compUniqueChassisChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("  </section>\n");
-        html.append("  <section class=\"charts\">\n");
-        html.append("    <div class=\"chart-grid\">\n");
-        html.append("      <div class=\"chart-card\">\n");
-        html.append("        <h2>TPL Success vs Failed</h2>\n");
-        html.append("        <canvas id=\"tplOutcomesChart\"></canvas>\n");
-        html.append("      </div>\n");
-        html.append("      <div class=\"chart-card\">\n");
-        html.append("        <h2>Comprehensive Success vs Failed</h2>\n");
-        html.append("        <canvas id=\"compOutcomesChart\"></canvas>\n");
-        html.append("      </div>\n");
-        html.append("      <div class=\"chart-card\">\n");
-        html.append("        <h2>TPL Success vs Failed (Unique Chassis)</h2>\n");
-        html.append("        <canvas id=\"tplUniqueChassisChart\"></canvas>\n");
-        html.append("      </div>\n");
-        html.append("      <div class=\"chart-card\">\n");
-        html.append("        <h2>Comprehensive Success vs Failed (Unique Chassis)</h2>\n");
-        html.append("        <canvas id=\"compUniqueChassisChart\"></canvas>\n");
+        html.append("  <section id=\"tpl-analysis\" class=\"page-section\">\n");
+        html.append("    <div class=\"summary-section\">\n");
+        html.append("      <h2 class=\"section-title\">TPL Summary</h2>\n");
+        html.append("      <div class=\"summary-grid\">\n");
+        appendSummaryCard(html, "TPL Requests", tplStats.getTotalQuotes(), "#2563eb");
+        appendSummaryCard(html, "TPL Success", tplStats.getPassCount(), "#16a34a");
+        appendSummaryCard(html, "TPL Failed", tplStats.getFailCount(), "#dc2626");
         html.append("      </div>\n");
         html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <h2 class=\"section-title\">TPL Requests by Body Category</h2>\n");
+        html.append("      <div class=\"chart-grid\">\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Successful Requests</h2>\n");
+        html.append("          <canvas id=\"tplBodySuccessChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Failed Requests</h2>\n");
+        html.append("          <canvas id=\"tplBodyFailureChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        appendOutcomeTable(html, "Body Category Outcomes", statistics.getTplBodyCategoryOutcomes());
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <h2 class=\"section-title\">TPL Requests by Specification</h2>\n");
+        html.append("      <div class=\"chart-grid\">\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Successful Requests</h2>\n");
+        html.append("          <canvas id=\"tplSpecSuccessChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Failed Requests</h2>\n");
+        html.append("          <canvas id=\"tplSpecFailureChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        appendOutcomeTable(html, "Specification Outcomes", statistics.getTplSpecificationOutcomes());
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
+        html.append("        <canvas id=\"tplAgeRatioChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        appendErrorTable(html, statistics.getTplErrorCounts());
         html.append("  </section>\n");
         html.append("</main>\n");
-        html.append(buildScripts(tplStats, compStats,
-                tplUniqueChassisSuccess, tplUniqueChassisFail,
-                compUniqueChassisSuccess, compUniqueChassisFail));
+        html.append(buildScripts(statistics));
         html.append("</body>\n");
         html.append("</html>\n");
         return html.toString();
@@ -375,12 +499,143 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
-    private String buildScripts(QuoteGroupStats tplStats,
-                                QuoteGroupStats compStats,
-                                long tplUniqueChassisSuccess,
-                                long tplUniqueChassisFail,
-                                long compUniqueChassisSuccess,
-                                long compUniqueChassisFail) {
+    private void appendOutcomeTable(StringBuilder html,
+                                    String heading,
+                                    Map<String, QuoteStatistics.OutcomeBreakdown> breakdown) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        if (breakdown.isEmpty()) {
+            html.append("      <p class=\"empty-state\">No data available.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">Category</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Success</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Failed</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Total</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Success Rate</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        for (Map.Entry<String, QuoteStatistics.OutcomeBreakdown> entry : breakdown.entrySet()) {
+            QuoteStatistics.OutcomeBreakdown data = entry.getValue();
+            long success = data.getSuccessCount();
+            long failure = data.getFailureCount();
+            long total = data.getProcessedTotal();
+            html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(entry.getKey()))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(success)))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(failure)))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(total)))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatPercentage(success, total)))
+                    .append("</td>\n");
+            html.append("          </tr>\n");
+        }
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
+    private void appendErrorTable(StringBuilder html, Map<String, Long> errorCounts) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>TPL Error Counts</h3>\n");
+        if (errorCounts.isEmpty()) {
+            html.append("      <p class=\"empty-state\">No errors recorded.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">Error</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Count</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        for (Map.Entry<String, Long> entry : errorCounts.entrySet()) {
+            html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(entry.getKey()))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(entry.getValue())))
+                    .append("</td>\n");
+            html.append("          </tr>\n");
+        }
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
+    private String buildScripts(QuoteStatistics statistics) {
+        QuoteGroupStats tplStats = statistics.getTplStats();
+        QuoteGroupStats compStats = statistics.getComprehensiveStats();
+        long tplUniqueChassisSuccess = statistics.getTplUniqueChassisSuccessCount();
+        long tplUniqueChassisFail = statistics.getTplUniqueChassisFailCount();
+        long compUniqueChassisSuccess = statistics.getComprehensiveUniqueChassisSuccessCount();
+        long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
+
+        Map<String, QuoteStatistics.OutcomeBreakdown> bodyOutcomes = statistics.getTplBodyCategoryOutcomes();
+        Map<String, QuoteStatistics.OutcomeBreakdown> specOutcomes = statistics.getTplSpecificationOutcomes();
+        List<QuoteStatistics.AgeRangeStats> ageStats = statistics.getTplAgeRangeStats();
+
+        List<String> bodyLabels = new ArrayList<>(bodyOutcomes.keySet());
+        List<Long> bodySuccessValues = new ArrayList<>();
+        List<Long> bodyFailureValues = new ArrayList<>();
+        if (bodyLabels.isEmpty()) {
+            bodyLabels.add("No Data");
+            bodySuccessValues.add(0L);
+            bodyFailureValues.add(0L);
+        } else {
+            for (QuoteStatistics.OutcomeBreakdown breakdown : bodyOutcomes.values()) {
+                bodySuccessValues.add(breakdown.getSuccessCount());
+                bodyFailureValues.add(breakdown.getFailureCount());
+            }
+        }
+
+        List<String> specLabels = new ArrayList<>(specOutcomes.keySet());
+        List<Long> specSuccessValues = new ArrayList<>();
+        List<Long> specFailureValues = new ArrayList<>();
+        if (specLabels.isEmpty()) {
+            specLabels.add("No Data");
+            specSuccessValues.add(0L);
+            specFailureValues.add(0L);
+        } else {
+            for (QuoteStatistics.OutcomeBreakdown breakdown : specOutcomes.values()) {
+                specSuccessValues.add(breakdown.getSuccessCount());
+                specFailureValues.add(breakdown.getFailureCount());
+            }
+        }
+
+        List<String> ageLabels = new ArrayList<>();
+        List<Double> ageSuccessRatios = new ArrayList<>();
+        List<Double> ageFailureRatios = new ArrayList<>();
+        if (ageStats.isEmpty()) {
+            ageLabels.add("No Data");
+            ageSuccessRatios.add(0.0);
+            ageFailureRatios.add(0.0);
+        } else {
+            for (QuoteStatistics.AgeRangeStats stat : ageStats) {
+                ageLabels.add(stat.getLabel());
+                ageSuccessRatios.add(stat.getSuccessRatio());
+                ageFailureRatios.add(stat.getFailureRatio());
+            }
+        }
+
         StringBuilder script = new StringBuilder();
         script.append("<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>\n");
         script.append("<script>\n");
@@ -419,8 +674,7 @@ public class HtmlReportGenerator {
         script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Unique chassis',\n");
-        script.append("      data: [").append(tplUniqueChassisSuccess).append(',')
-                .append(tplUniqueChassisFail).append("],\n");
+        script.append("      data: [").append(tplUniqueChassisSuccess).append(',').append(tplUniqueChassisFail).append("],\n");
         script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
@@ -429,34 +683,160 @@ public class HtmlReportGenerator {
         script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Unique chassis',\n");
-        script.append("      data: [").append(compUniqueChassisSuccess).append(',')
-                .append(compUniqueChassisFail).append("],\n");
+        script.append("      data: [").append(compUniqueChassisSuccess).append(',').append(compUniqueChassisFail).append("],\n");
         script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  new Chart(document.getElementById('tplOutcomesChart'), {\n");
-        script.append("    type: 'bar',\n");
-        script.append("    data: tplData,\n");
-        script.append("    options: sharedOptions\n");
+        script.append("  const tplBodyLabels = ").append(toJsStringArray(bodyLabels)).append(";\n");
+        script.append("  const tplBodySuccessData = {\n");
+        script.append("    labels: tplBodyLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Successful Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(bodySuccessValues)).append(",\n");
+        script.append("      backgroundColor: '#16a34a',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const tplBodyFailureData = {\n");
+        script.append("    labels: tplBodyLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Failed Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(bodyFailureValues)).append(",\n");
+        script.append("      backgroundColor: '#dc2626',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const tplSpecLabels = ").append(toJsStringArray(specLabels)).append(";\n");
+        script.append("  const tplSpecSuccessData = {\n");
+        script.append("    labels: tplSpecLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Successful Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(specSuccessValues)).append(",\n");
+        script.append("      backgroundColor: '#16a34a',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const tplSpecFailureData = {\n");
+        script.append("    labels: tplSpecLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Failed Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(specFailureValues)).append(",\n");
+        script.append("      backgroundColor: '#dc2626',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const tplAgeRatioData = {\n");
+        script.append("    labels: ").append(toJsStringArray(ageLabels)).append(",\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Success %',\n");
+        script.append("        data: ").append(toJsDoubleArray(ageSuccessRatios)).append(",\n");
+        script.append("        borderColor: '#16a34a',\n");
+        script.append("        backgroundColor: 'rgba(22, 163, 74, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Failure %',\n");
+        script.append("        data: ").append(toJsDoubleArray(ageFailureRatios)).append(",\n");
+        script.append("        borderColor: '#dc2626',\n");
+        script.append("        backgroundColor: 'rgba(220, 38, 38, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  new Chart(document.getElementById('tplOutcomesChart'), { type: 'bar', data: tplData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compOutcomesChart'), { type: 'bar', data: compData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplUniqueChassisChart'), { type: 'bar', data: tplUniqueChassisData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compUniqueChassisChart'), { type: 'bar', data: compUniqueChassisData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplBodySuccessChart'), { type: 'bar', data: tplBodySuccessData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplBodyFailureChart'), { type: 'bar', data: tplBodyFailureData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplSpecSuccessChart'), { type: 'bar', data: tplSpecSuccessData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplSpecFailureChart'), { type: 'bar', data: tplSpecFailureData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplAgeRatioChart'), {\n");
+        script.append("    type: 'line',\n");
+        script.append("    data: tplAgeRatioData,\n");
+        script.append("    options: {\n");
+        script.append("      responsive: true,\n");
+        script.append("      interaction: { mode: 'index', intersect: false },\n");
+        script.append("      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => `${value}%` } } },\n");
+        script.append("      plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } } }\n");
+        script.append("    }\n");
         script.append("  });\n");
-        script.append("  new Chart(document.getElementById('compOutcomesChart'), {\n");
-        script.append("    type: 'bar',\n");
-        script.append("    data: compData,\n");
-        script.append("    options: sharedOptions\n");
-        script.append("  });\n");
-        script.append("  new Chart(document.getElementById('tplUniqueChassisChart'), {\n");
-        script.append("    type: 'bar',\n");
-        script.append("    data: tplUniqueChassisData,\n");
-        script.append("    options: sharedOptions\n");
-        script.append("  });\n");
-        script.append("  new Chart(document.getElementById('compUniqueChassisChart'), {\n");
-        script.append("    type: 'bar',\n");
-        script.append("    data: compUniqueChassisData,\n");
-        script.append("    options: sharedOptions\n");
+        script.append("  document.querySelectorAll('.nav-button').forEach(button => {\n");
+        script.append("    button.addEventListener('click', () => {\n");
+        script.append("      document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));\n");
+        script.append("      document.querySelectorAll('.page-section').forEach(section => section.classList.remove('active'));\n");
+        script.append("      button.classList.add('active');\n");
+        script.append("      const target = button.getAttribute('data-target');\n");
+        script.append("      const section = document.getElementById(target);\n");
+        script.append("      if (section) {\n");
+        script.append("        section.classList.add('active');\n");
+        script.append("        section.scrollIntoView({ behavior: 'smooth', block: 'start' });\n");
+        script.append("      }\n");
+        script.append("    });\n");
         script.append("  });\n");
         script.append("</script>\n");
         return script.toString();
+    }
+
+    private static String formatPercentage(long numerator, long denominator) {
+        if (denominator == 0) {
+            return PERCENT_FORMAT.format(0);
+        }
+        double ratio = (double) numerator / denominator;
+        return PERCENT_FORMAT.format(ratio);
+    }
+
+    private static String toJsStringLiteral(String value) {
+        if (value == null) {
+            return "''";
+        }
+        StringBuilder builder = new StringBuilder("'");
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            switch (ch) {
+                case '\\':
+                    builder.append("\\\\");
+                    break;
+                case '\'':
+                    builder.append("\\'");
+                    break;
+                case '\n':
+                    builder.append("\\n");
+                    break;
+                case '\r':
+                    builder.append("\\r");
+                    break;
+                case '\t':
+                    builder.append("\\t");
+                    break;
+                default:
+                    builder.append(ch);
+            }
+        }
+        builder.append("'");
+        return builder.toString();
+    }
+
+    private static String toJsStringArray(Collection<String> values) {
+        return values.stream()
+                .map(HtmlReportGenerator::toJsStringLiteral)
+                .collect(Collectors.joining(",", "[", "]"));
+    }
+
+    private static String toJsNumberArray(List<? extends Number> values) {
+        return values.stream()
+                .map(number -> number == null ? "0" : number.toString())
+                .collect(Collectors.joining(",", "[", "]"));
+    }
+
+    private static String toJsDoubleArray(List<Double> values) {
+        return values.stream()
+                .map(value -> String.format(Locale.US, "%.1f", value))
+                .collect(Collectors.joining(",", "[", "]"));
     }
 
     private static String escapeHtml(String input) {
