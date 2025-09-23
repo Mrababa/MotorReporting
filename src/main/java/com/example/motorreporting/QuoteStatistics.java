@@ -2,6 +2,7 @@ package com.example.motorreporting;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -81,5 +82,26 @@ public class QuoteStatistics {
         return getCombinedFailureReasons().entrySet().stream()
                 .limit(limit)
                 .collect(Collectors.toList());
+    }
+
+    public Map<String, Long> getCombinedFailuresByManufactureYear() {
+        Map<String, Long> combined = new LinkedHashMap<>();
+        tplStats.getFailuresByManufactureYear().forEach((year, count) ->
+                combined.merge(year, count, Long::sum));
+        comprehensiveStats.getFailuresByManufactureYear().forEach((year, count) ->
+                combined.merge(year, count, Long::sum));
+
+        return combined.entrySet().stream()
+                .sorted(Comparator.comparingInt(entry -> yearOrderKey(entry.getKey())))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
+                        (a, b) -> a, LinkedHashMap::new));
+    }
+
+    private static int yearOrderKey(String label) {
+        try {
+            return Integer.parseInt(label);
+        } catch (NumberFormatException ex) {
+            return Integer.MAX_VALUE;
+        }
     }
 }
