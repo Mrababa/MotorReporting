@@ -3,12 +3,14 @@ package com.example.motorreporting;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.StandardChartTheme;
+import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.title.TextTitle;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.data.general.DefaultPieDataset;
 
 import java.awt.*;
+import java.util.List;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
@@ -108,6 +110,35 @@ public final class ChartCreator {
                 false);
         chart.setBackgroundPaint(Color.WHITE);
         chart.getTitle().setFont(new Font("SansSerif", Font.BOLD, 14));
+        return chart;
+    }
+
+    public static JFreeChart createManufactureYearOutcomeChart(String title,
+                                                               List<QuoteStatistics.ManufactureYearStats> stats) {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        if (stats == null || stats.isEmpty()) {
+            dataset.addValue(0, "Success %", "No Data");
+            dataset.addValue(0, "Failure %", "No Data");
+        } else {
+            for (QuoteStatistics.ManufactureYearStats stat : stats) {
+                dataset.addValue(stat.getSuccessRatio(), "Success %", stat.getLabel());
+                dataset.addValue(stat.getFailureRatio(), "Failure %", stat.getLabel());
+            }
+        }
+
+        JFreeChart chart = ChartFactory.createLineChart(
+                title,
+                "Manufacture Year",
+                "Percentage",
+                dataset,
+                PlotOrientation.VERTICAL,
+                true,
+                true,
+                false);
+        chart.setBackgroundPaint(Color.WHITE);
+        chart.getTitle().setFont(new Font("SansSerif", Font.BOLD, 14));
+        CategoryPlot plot = chart.getCategoryPlot();
+        plot.getRangeAxis().setRange(0.0, 100.0);
         return chart;
     }
 
