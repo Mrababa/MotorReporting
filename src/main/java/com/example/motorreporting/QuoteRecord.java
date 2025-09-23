@@ -3,8 +3,11 @@ package com.example.motorreporting;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Represents a single quote attempt as loaded from the source data.
@@ -18,6 +21,7 @@ public class QuoteRecord {
     private final String quoteNumber;
     private final Integer manufactureYear;
     private final BigDecimal estimatedValue;
+    private final QuoteOutcome outcome;
 
     private QuoteRecord(Map<String, String> rawValues,
                         String insuranceType,
@@ -25,7 +29,8 @@ public class QuoteRecord {
                         String errorText,
                         Integer manufactureYear,
                         BigDecimal estimatedValue,
-                        String quoteNumber) {
+                        String quoteNumber,
+                        QuoteOutcome outcome) {
         this.rawValues = Collections.unmodifiableMap(new HashMap<>(rawValues));
         this.insuranceType = insuranceType;
         this.status = status;
@@ -33,6 +38,7 @@ public class QuoteRecord {
         this.manufactureYear = manufactureYear;
         this.estimatedValue = estimatedValue;
         this.quoteNumber = quoteNumber;
+        this.outcome = Objects.requireNonNull(outcome, "outcome");
     }
 
     public static QuoteRecord fromValues(Map<String, String> values) {
@@ -47,17 +53,19 @@ public class QuoteRecord {
 
         String errorText = getValueIgnoreCase(normalized, "ErrorText");
         String quotationNumber = getValueIgnoreCase(normalized, "QuotationNo");
-        String derivedStatus = determineStatus(errorText, quotationNumber);
-        setValueIgnoreCase(normalized, "Status", derivedStatus);
+        String rawStatus = getValueIgnoreCase(normalized, "Status");
+        QuoteOutcome outcome = determineOutcome(rawStatus, errorText, quotationNumber);
+        setValueIgnoreCase(normalized, "Status", outcome.getDisplayLabel());
         normalizeOverrideIsGccSpec(normalized);
 
         String insuranceType = getValueIgnoreCase(normalized, "InsuranceType");
-        String status = getValueIgnoreCase(normalized, "Status");
+        String status = outcome.getDisplayLabel();
         Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
         String quoteNumber = extractQuoteNumber(normalized);
 
-        return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue, quoteNumber);
+        return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue,
+                quoteNumber, outcome);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
@@ -99,14 +107,18 @@ public class QuoteRecord {
         return false;
     }
 
-    private static String determineStatus(String errorText, String quotationNumber) {
-      if (!"NULL".equals(errorText) ) {
-            return "Failed";
+    private static QuoteOutcome determineOutcome(String statusValue, String errorText, String quotationNumber) {
+        Optional<QuoteOutcome> parsed = QuoteOutcome.fromStatusValue(statusValue);
+        if (parsed.isPresent()) {
+            return parsed.get();
         }
-        if (!"NULL".equals(quotationNumber )) {
-            return "Pass";
+        if (!isNullLiteral(errorText)) {
+            return QuoteOutcome.FAILURE;
         }
-        return "Skipped";
+        if (!isNullLiteral(quotationNumber)) {
+            return QuoteOutcome.SUCCESS;
+        }
+        return QuoteOutcome.SKIPPED;
     }
 
 
@@ -132,7 +144,10 @@ public class QuoteRecord {
             return true;
         }
         String trimmed = value.trim();
-        return trimmed.isEmpty() || "Null".equals(trimmed);
+        if (trimmed.isEmpty()) {
+            return true;
+        }
+        return "null".equalsIgnoreCase(trimmed);
     }
 
     private static String extractQuoteNumber(Map<String, String> values) {
@@ -181,15 +196,15 @@ public class QuoteRecord {
     }
 
     public boolean isSuccessful() {
-        return !hasError() && hasQuoteNumber();
+        return outcome == QuoteOutcome.SUCCESS;
     }
 
     public boolean isFailure() {
-        return hasError();
+        return outcome == QuoteOutcome.FAILURE;
     }
 
     public boolean isSkipped() {
-        return !hasError() && !hasQuoteNumber();
+        return outcome == QuoteOutcome.SKIPPED;
     }
 
     public String getFailureReason() {
@@ -229,5 +244,84 @@ public class QuoteRecord {
 
     public Map<String, String> getRawValues() {
         return rawValues;
+    }
+
+    private enum QuoteOutcome {
+        SUCCESS("Success"),
+        FAILURE("Failed"),
+        SKIPPED("Skipped");
+
+        private static final Set<String> SUCCESS_LABELS = Set.of(
+                "success",
+                "successful",
+                "pass",
+                "passed",
+                "approved",
+                "complete",
+                "completed",
+                "done"
+        );
+
+        private static final Set<String> FAILURE_LABELS = Set.of(
+                "fail",
+                "failed",
+                "failure",
+                "error",
+                "declined",
+                "rejected",
+                "denied"
+        );
+
+        private static final Set<String> SKIPPED_LABELS = Set.of(
+                "skip",
+                "skipped",
+                "pending",
+                "not processed",
+                "incomplete",
+                "cancelled",
+                "canceled",
+                "void",
+                "abandoned"
+        );
+
+        private final String displayLabel;
+
+        QuoteOutcome(String displayLabel) {
+            this.displayLabel = displayLabel;
+        }
+
+        String getDisplayLabel() {
+            return displayLabel;
+        }
+
+        static Optional<QuoteOutcome> fromStatusValue(String statusValue) {
+            if (statusValue == null) {
+                return Optional.empty();
+            }
+            String normalized = statusValue.trim().toLowerCase(Locale.ROOT);
+            if (normalized.isEmpty() || "null".equals(normalized)) {
+                return Optional.empty();
+            }
+            if (SUCCESS_LABELS.contains(normalized)
+                    || normalized.startsWith("success")
+                    || normalized.startsWith("pass")) {
+                return Optional.of(SUCCESS);
+            }
+            if (FAILURE_LABELS.contains(normalized)
+                    || normalized.startsWith("fail")
+                    || normalized.startsWith("error")
+                    || normalized.startsWith("declin")
+                    || normalized.startsWith("reject")) {
+                return Optional.of(FAILURE);
+            }
+            if (SKIPPED_LABELS.contains(normalized)
+                    || normalized.startsWith("skip")
+                    || normalized.startsWith("pending")
+                    || normalized.startsWith("cancel")
+                    || normalized.startsWith("void")) {
+                return Optional.of(SKIPPED);
+            }
+            return Optional.empty();
+        }
     }
 }
