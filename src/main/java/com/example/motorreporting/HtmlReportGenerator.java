@@ -282,6 +282,7 @@ public class HtmlReportGenerator {
         html.append("  <nav class=\"page-nav\">\n");
         html.append("    <button type=\"button\" class=\"nav-button active\" data-target=\"overview\">Overview</button>\n");
         html.append("    <button type=\"button\" class=\"nav-button\" data-target=\"tpl-analysis\">TPL Analysis</button>\n");
+        html.append("    <button type=\"button\" class=\"nav-button\" data-target=\"comprehensive-analysis\">Comprehensive Analysis</button>\n");
         html.append("  </nav>\n");
         html.append("  <section id=\"overview\" class=\"page-section active\">\n");
         html.append("    <div class=\"summary-grid\">\n");
@@ -361,7 +362,58 @@ public class HtmlReportGenerator {
         html.append("        <canvas id=\"tplAgeRatioChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
-        appendErrorTable(html, statistics.getTplErrorCounts());
+        appendErrorTable(html, "TPL Error Counts", statistics.getTplErrorCounts());
+        html.append("  </section>\n");
+        html.append("  <section id=\"comprehensive-analysis\" class=\"page-section\">\n");
+        html.append("    <div class=\"summary-section\">\n");
+        html.append("      <h2 class=\"section-title\">Comprehensive Summary</h2>\n");
+        html.append("      <div class=\"summary-grid\">\n");
+        appendSummaryCard(html, "Comprehensive Requests", compStats.getTotalQuotes(), "#2563eb");
+        appendSummaryCard(html, "Comprehensive Success", compStats.getPassCount(), "#16a34a");
+        appendSummaryCard(html, "Comprehensive Failed", compStats.getFailCount(), "#dc2626");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <h2 class=\"section-title\">Comprehensive Requests by Body Category</h2>\n");
+        html.append("      <div class=\"chart-grid\">\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Successful Requests</h2>\n");
+        html.append("          <canvas id=\"compBodySuccessChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Failed Requests</h2>\n");
+        html.append("          <canvas id=\"compBodyFailureChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        appendOutcomeTable(html, "Comprehensive Body Category Outcomes", statistics.getComprehensiveBodyCategoryOutcomes());
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <h2 class=\"section-title\">Comprehensive Requests by Specification</h2>\n");
+        html.append("      <div class=\"chart-grid\">\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Successful Requests</h2>\n");
+        html.append("          <canvas id=\"compSpecSuccessChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Failed Requests</h2>\n");
+        html.append("          <canvas id=\"compSpecFailureChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        appendOutcomeTable(html, "Comprehensive Specification Outcomes", statistics.getComprehensiveSpecificationOutcomes());
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
+        html.append("        <canvas id=\"compAgeRatioChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Success vs Failure Ratio by Estimated Value</h2>\n");
+        html.append("        <canvas id=\"compEstimatedValueChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        appendErrorTable(html, "Comprehensive Error Counts", statistics.getComprehensiveErrorCounts());
         html.append("  </section>\n");
         html.append("</main>\n");
         html.append(buildScripts(statistics));
@@ -550,9 +602,11 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
-    private void appendErrorTable(StringBuilder html, Map<String, Long> errorCounts) {
+    private void appendErrorTable(StringBuilder html, String heading, Map<String, Long> errorCounts) {
         html.append("    <div class=\"table-card\">\n");
-        html.append("      <h3>TPL Error Counts</h3>\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
         if (errorCounts.isEmpty()) {
             html.append("      <p class=\"empty-state\">No errors recorded.</p>\n");
             html.append("    </div>\n");
@@ -589,51 +643,117 @@ public class HtmlReportGenerator {
         long compUniqueChassisSuccess = statistics.getComprehensiveUniqueChassisSuccessCount();
         long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
 
-        Map<String, QuoteStatistics.OutcomeBreakdown> bodyOutcomes = statistics.getTplBodyCategoryOutcomes();
-        Map<String, QuoteStatistics.OutcomeBreakdown> specOutcomes = statistics.getTplSpecificationOutcomes();
-        List<QuoteStatistics.AgeRangeStats> ageStats = statistics.getTplAgeRangeStats();
+        Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyOutcomes = statistics.getTplBodyCategoryOutcomes();
+        Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecOutcomes = statistics.getTplSpecificationOutcomes();
+        Map<String, QuoteStatistics.OutcomeBreakdown> compBodyOutcomes = statistics.getComprehensiveBodyCategoryOutcomes();
+        Map<String, QuoteStatistics.OutcomeBreakdown> compSpecOutcomes = statistics.getComprehensiveSpecificationOutcomes();
+        List<QuoteStatistics.AgeRangeStats> tplAgeStats = statistics.getTplAgeRangeStats();
+        List<QuoteStatistics.AgeRangeStats> compAgeStats = statistics.getComprehensiveAgeRangeStats();
+        List<QuoteStatistics.ValueRangeStats> compValueStats = statistics.getComprehensiveEstimatedValueStats();
 
-        List<String> bodyLabels = new ArrayList<>(bodyOutcomes.keySet());
-        List<Long> bodySuccessValues = new ArrayList<>();
-        List<Long> bodyFailureValues = new ArrayList<>();
-        if (bodyLabels.isEmpty()) {
-            bodyLabels.add("No Data");
-            bodySuccessValues.add(0L);
-            bodyFailureValues.add(0L);
+        List<String> tplBodyLabels = new ArrayList<>(tplBodyOutcomes.keySet());
+        List<Long> tplBodySuccessValues = new ArrayList<>();
+        List<Long> tplBodyFailureValues = new ArrayList<>();
+        if (tplBodyLabels.isEmpty()) {
+            tplBodyLabels.add("No Data");
+            tplBodySuccessValues.add(0L);
+            tplBodyFailureValues.add(0L);
         } else {
-            for (QuoteStatistics.OutcomeBreakdown breakdown : bodyOutcomes.values()) {
-                bodySuccessValues.add(breakdown.getSuccessCount());
-                bodyFailureValues.add(breakdown.getFailureCount());
+            for (QuoteStatistics.OutcomeBreakdown breakdown : tplBodyOutcomes.values()) {
+                tplBodySuccessValues.add(breakdown.getSuccessCount());
+                tplBodyFailureValues.add(breakdown.getFailureCount());
             }
         }
 
-        List<String> specLabels = new ArrayList<>(specOutcomes.keySet());
-        List<Long> specSuccessValues = new ArrayList<>();
-        List<Long> specFailureValues = new ArrayList<>();
-        if (specLabels.isEmpty()) {
-            specLabels.add("No Data");
-            specSuccessValues.add(0L);
-            specFailureValues.add(0L);
+        List<String> compBodyLabels = new ArrayList<>(compBodyOutcomes.keySet());
+        List<Long> compBodySuccessValues = new ArrayList<>();
+        List<Long> compBodyFailureValues = new ArrayList<>();
+        if (compBodyLabels.isEmpty()) {
+            compBodyLabels.add("No Data");
+            compBodySuccessValues.add(0L);
+            compBodyFailureValues.add(0L);
         } else {
-            for (QuoteStatistics.OutcomeBreakdown breakdown : specOutcomes.values()) {
-                specSuccessValues.add(breakdown.getSuccessCount());
-                specFailureValues.add(breakdown.getFailureCount());
+            for (QuoteStatistics.OutcomeBreakdown breakdown : compBodyOutcomes.values()) {
+                compBodySuccessValues.add(breakdown.getSuccessCount());
+                compBodyFailureValues.add(breakdown.getFailureCount());
             }
         }
 
-        List<String> ageLabels = new ArrayList<>();
-        List<Double> ageSuccessRatios = new ArrayList<>();
-        List<Double> ageFailureRatios = new ArrayList<>();
-        if (ageStats.isEmpty()) {
-            ageLabels.add("No Data");
-            ageSuccessRatios.add(0.0);
-            ageFailureRatios.add(0.0);
+        List<String> tplSpecLabels = new ArrayList<>(tplSpecOutcomes.keySet());
+        List<Long> tplSpecSuccessValues = new ArrayList<>();
+        List<Long> tplSpecFailureValues = new ArrayList<>();
+        if (tplSpecLabels.isEmpty()) {
+            tplSpecLabels.add("No Data");
+            tplSpecSuccessValues.add(0L);
+            tplSpecFailureValues.add(0L);
         } else {
-            for (QuoteStatistics.AgeRangeStats stat : ageStats) {
-                ageLabels.add(stat.getLabel());
-                ageSuccessRatios.add(stat.getSuccessRatio());
-                ageFailureRatios.add(stat.getFailureRatio());
+            for (QuoteStatistics.OutcomeBreakdown breakdown : tplSpecOutcomes.values()) {
+                tplSpecSuccessValues.add(breakdown.getSuccessCount());
+                tplSpecFailureValues.add(breakdown.getFailureCount());
             }
+        }
+
+        List<String> compSpecLabels = new ArrayList<>(compSpecOutcomes.keySet());
+        List<Long> compSpecSuccessValues = new ArrayList<>();
+        List<Long> compSpecFailureValues = new ArrayList<>();
+        if (compSpecLabels.isEmpty()) {
+            compSpecLabels.add("No Data");
+            compSpecSuccessValues.add(0L);
+            compSpecFailureValues.add(0L);
+        } else {
+            for (QuoteStatistics.OutcomeBreakdown breakdown : compSpecOutcomes.values()) {
+                compSpecSuccessValues.add(breakdown.getSuccessCount());
+                compSpecFailureValues.add(breakdown.getFailureCount());
+            }
+        }
+
+        List<String> tplAgeLabels = new ArrayList<>();
+        List<Double> tplAgeSuccessRatios = new ArrayList<>();
+        List<Double> tplAgeFailureRatios = new ArrayList<>();
+        if (tplAgeStats.isEmpty()) {
+            tplAgeLabels.add("No Data");
+            tplAgeSuccessRatios.add(0.0);
+            tplAgeFailureRatios.add(0.0);
+        } else {
+            for (QuoteStatistics.AgeRangeStats stat : tplAgeStats) {
+                tplAgeLabels.add(stat.getLabel());
+                tplAgeSuccessRatios.add(stat.getSuccessRatio());
+                tplAgeFailureRatios.add(stat.getFailureRatio());
+            }
+        }
+
+        List<String> compAgeLabels = new ArrayList<>();
+        List<Double> compAgeSuccessRatios = new ArrayList<>();
+        List<Double> compAgeFailureRatios = new ArrayList<>();
+        if (compAgeStats.isEmpty()) {
+            compAgeLabels.add("No Data");
+            compAgeSuccessRatios.add(0.0);
+            compAgeFailureRatios.add(0.0);
+        } else {
+            for (QuoteStatistics.AgeRangeStats stat : compAgeStats) {
+                compAgeLabels.add(stat.getLabel());
+                compAgeSuccessRatios.add(stat.getSuccessRatio());
+                compAgeFailureRatios.add(stat.getFailureRatio());
+            }
+        }
+
+        List<String> compValueLabels = new ArrayList<>();
+        List<Double> compValueSuccessRatios = new ArrayList<>();
+        List<Double> compValueFailureRatios = new ArrayList<>();
+        boolean hasCompValueData = false;
+        for (QuoteStatistics.ValueRangeStats stat : compValueStats) {
+            if (stat.getProcessedTotal() == 0) {
+                continue;
+            }
+            hasCompValueData = true;
+            compValueLabels.add(stat.getLabel());
+            compValueSuccessRatios.add(stat.getSuccessRatio());
+            compValueFailureRatios.add(stat.getFailureRatio());
+        }
+        if (!hasCompValueData) {
+            compValueLabels.add("No Data");
+            compValueSuccessRatios.add(0.0);
+            compValueFailureRatios.add(0.0);
         }
 
         StringBuilder script = new StringBuilder();
@@ -651,6 +771,12 @@ public class HtmlReportGenerator {
         script.append("      legend: { display: false },\n");
         script.append("      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}` } }\n");
         script.append("    }\n");
+        script.append("  };\n");
+        script.append("  const ratioChartOptions = {\n");
+        script.append("    responsive: true,\n");
+        script.append("    interaction: { mode: 'index', intersect: false },\n");
+        script.append("    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => `${value}%` } } },\n");
+        script.append("    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } } }\n");
         script.append("  };\n");
         script.append("  const tplData = {\n");
         script.append("    labels: ['Success', 'Failed'],\n");
@@ -688,12 +814,12 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const tplBodyLabels = ").append(toJsStringArray(bodyLabels)).append(";\n");
+        script.append("  const tplBodyLabels = ").append(toJsStringArray(tplBodyLabels)).append(";\n");
         script.append("  const tplBodySuccessData = {\n");
         script.append("    labels: tplBodyLabels,\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Successful Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(bodySuccessValues)).append(",\n");
+        script.append("      data: ").append(toJsNumberArray(tplBodySuccessValues)).append(",\n");
         script.append("      backgroundColor: '#16a34a',\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
@@ -702,17 +828,36 @@ public class HtmlReportGenerator {
         script.append("    labels: tplBodyLabels,\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Failed Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(bodyFailureValues)).append(",\n");
+        script.append("      data: ").append(toJsNumberArray(tplBodyFailureValues)).append(",\n");
         script.append("      backgroundColor: '#dc2626',\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const tplSpecLabels = ").append(toJsStringArray(specLabels)).append(";\n");
+        script.append("  const compBodyLabels = ").append(toJsStringArray(compBodyLabels)).append(";\n");
+        script.append("  const compBodySuccessData = {\n");
+        script.append("    labels: compBodyLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Successful Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(compBodySuccessValues)).append(",\n");
+        script.append("      backgroundColor: '#16a34a',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const compBodyFailureData = {\n");
+        script.append("    labels: compBodyLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Failed Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(compBodyFailureValues)).append(",\n");
+        script.append("      backgroundColor: '#dc2626',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const tplSpecLabels = ").append(toJsStringArray(tplSpecLabels)).append(";\n");
         script.append("  const tplSpecSuccessData = {\n");
         script.append("    labels: tplSpecLabels,\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Successful Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(specSuccessValues)).append(",\n");
+        script.append("      data: ").append(toJsNumberArray(tplSpecSuccessValues)).append(",\n");
         script.append("      backgroundColor: '#16a34a',\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
@@ -721,17 +866,36 @@ public class HtmlReportGenerator {
         script.append("    labels: tplSpecLabels,\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Failed Requests',\n");
-        script.append("      data: ").append(toJsNumberArray(specFailureValues)).append(",\n");
+        script.append("      data: ").append(toJsNumberArray(tplSpecFailureValues)).append(",\n");
+        script.append("      backgroundColor: '#dc2626',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const compSpecLabels = ").append(toJsStringArray(compSpecLabels)).append(";\n");
+        script.append("  const compSpecSuccessData = {\n");
+        script.append("    labels: compSpecLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Successful Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(compSpecSuccessValues)).append(",\n");
+        script.append("      backgroundColor: '#16a34a',\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const compSpecFailureData = {\n");
+        script.append("    labels: compSpecLabels,\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Failed Requests',\n");
+        script.append("      data: ").append(toJsNumberArray(compSpecFailureValues)).append(",\n");
         script.append("      backgroundColor: '#dc2626',\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
         script.append("  const tplAgeRatioData = {\n");
-        script.append("    labels: ").append(toJsStringArray(ageLabels)).append(",\n");
+        script.append("    labels: ").append(toJsStringArray(tplAgeLabels)).append(",\n");
         script.append("    datasets: [\n");
         script.append("      {\n");
         script.append("        label: 'Success %',\n");
-        script.append("        data: ").append(toJsDoubleArray(ageSuccessRatios)).append(",\n");
+        script.append("        data: ").append(toJsDoubleArray(tplAgeSuccessRatios)).append(",\n");
         script.append("        borderColor: '#16a34a',\n");
         script.append("        backgroundColor: 'rgba(22, 163, 74, 0.15)',\n");
         script.append("        tension: 0.35,\n");
@@ -739,9 +903,51 @@ public class HtmlReportGenerator {
         script.append("      },\n");
         script.append("      {\n");
         script.append("        label: 'Failure %',\n");
-        script.append("        data: ").append(toJsDoubleArray(ageFailureRatios)).append(",\n");
+        script.append("        data: ").append(toJsDoubleArray(tplAgeFailureRatios)).append(",\n");
         script.append("        borderColor: '#dc2626',\n");
         script.append("        backgroundColor: 'rgba(220, 38, 38, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const compAgeRatioData = {\n");
+        script.append("    labels: ").append(toJsStringArray(compAgeLabels)).append(",\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Success %',\n");
+        script.append("        data: ").append(toJsDoubleArray(compAgeSuccessRatios)).append(",\n");
+        script.append("        borderColor: '#16a34a',\n");
+        script.append("        backgroundColor: 'rgba(22, 163, 74, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Failure %',\n");
+        script.append("        data: ").append(toJsDoubleArray(compAgeFailureRatios)).append(",\n");
+        script.append("        borderColor: '#dc2626',\n");
+        script.append("        backgroundColor: 'rgba(220, 38, 38, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const compEstimatedValueData = {\n");
+        script.append("    labels: ").append(toJsStringArray(compValueLabels)).append(",\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Success %',\n");
+        script.append("        data: ").append(toJsDoubleArray(compValueSuccessRatios)).append(",\n");
+        script.append("        borderColor: '#2563eb',\n");
+        script.append("        backgroundColor: 'rgba(37, 99, 235, 0.15)',\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Failure %',\n");
+        script.append("        data: ").append(toJsDoubleArray(compValueFailureRatios)).append(",\n");
+        script.append("        borderColor: '#f97316',\n");
+        script.append("        backgroundColor: 'rgba(249, 115, 22, 0.15)',\n");
         script.append("        tension: 0.35,\n");
         script.append("        fill: true\n");
         script.append("      }\n");
@@ -755,15 +961,24 @@ public class HtmlReportGenerator {
         script.append("  new Chart(document.getElementById('tplBodyFailureChart'), { type: 'bar', data: tplBodyFailureData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplSpecSuccessChart'), { type: 'bar', data: tplSpecSuccessData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplSpecFailureChart'), { type: 'bar', data: tplSpecFailureData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compBodySuccessChart'), { type: 'bar', data: compBodySuccessData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compBodyFailureChart'), { type: 'bar', data: compBodyFailureData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compSpecSuccessChart'), { type: 'bar', data: compSpecSuccessData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('compSpecFailureChart'), { type: 'bar', data: compSpecFailureData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplAgeRatioChart'), {\n");
         script.append("    type: 'line',\n");
         script.append("    data: tplAgeRatioData,\n");
-        script.append("    options: {\n");
-        script.append("      responsive: true,\n");
-        script.append("      interaction: { mode: 'index', intersect: false },\n");
-        script.append("      scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => `${value}%` } } },\n");
-        script.append("      plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } } }\n");
-        script.append("    }\n");
+        script.append("    options: ratioChartOptions\n");
+        script.append("  });\n");
+        script.append("  new Chart(document.getElementById('compAgeRatioChart'), {\n");
+        script.append("    type: 'line',\n");
+        script.append("    data: compAgeRatioData,\n");
+        script.append("    options: ratioChartOptions\n");
+        script.append("  });\n");
+        script.append("  new Chart(document.getElementById('compEstimatedValueChart'), {\n");
+        script.append("    type: 'line',\n");
+        script.append("    data: compEstimatedValueData,\n");
+        script.append("    options: ratioChartOptions\n");
         script.append("  });\n");
         script.append("  document.querySelectorAll('.nav-button').forEach(button => {\n");
         script.append("    button.addEventListener('click', () => {\n");

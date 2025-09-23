@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -42,8 +43,16 @@ public final class QuoteStatisticsCalculator {
                 computeOutcomeBreakdown(tplRecords, QuoteRecord::getBodyCategoryLabel);
         Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecificationOutcomes =
                 computeOutcomeBreakdown(tplRecords, QuoteRecord::getOverrideSpecificationLabel);
-        List<QuoteStatistics.AgeRangeStats> tplAgeRangeStats = computeTplAgeRangeStats(tplRecords);
-        Map<String, Long> tplErrorCounts = computeTplErrorCounts(tplRecords);
+        Map<String, QuoteStatistics.OutcomeBreakdown> compBodyCategoryOutcomes =
+                computeOutcomeBreakdown(compRecords, QuoteRecord::getBodyCategoryLabel);
+        Map<String, QuoteStatistics.OutcomeBreakdown> compSpecificationOutcomes =
+                computeOutcomeBreakdown(compRecords, QuoteRecord::getOverrideSpecificationLabel);
+        List<QuoteStatistics.AgeRangeStats> tplAgeRangeStats = computeAgeRangeStats(tplRecords);
+        List<QuoteStatistics.AgeRangeStats> compAgeRangeStats = computeAgeRangeStats(compRecords);
+        List<QuoteStatistics.ValueRangeStats> compEstimatedValueStats =
+                computeEstimatedValueRangeStats(compRecords);
+        Map<String, Long> tplErrorCounts = computeErrorCounts(tplRecords, false);
+        Map<String, Long> compErrorCounts = computeErrorCounts(compRecords, true);
         return new QuoteStatistics(tplStats, compStats,
                 uniqueChassisSummary.getTotal(),
                 uniqueChassisSummary.getSuccessCount(),
@@ -54,8 +63,13 @@ public final class QuoteStatisticsCalculator {
                 compUniqueChassisSummary.getFailureCount(),
                 tplBodyCategoryOutcomes,
                 tplSpecificationOutcomes,
+                compBodyCategoryOutcomes,
+                compSpecificationOutcomes,
                 tplAgeRangeStats,
-                tplErrorCounts);
+                compAgeRangeStats,
+                compEstimatedValueStats,
+                tplErrorCounts,
+                compErrorCounts);
     }
 
     private static QuoteGroupStats buildStats(GroupType groupType, List<QuoteRecord> records) {
@@ -159,7 +173,7 @@ public final class QuoteStatisticsCalculator {
                         LinkedHashMap::new));
     }
 
-    private static List<QuoteStatistics.AgeRangeStats> computeTplAgeRangeStats(List<QuoteRecord> records) {
+    private static List<QuoteStatistics.AgeRangeStats> computeAgeRangeStats(List<QuoteRecord> records) {
         Map<AgeRange, OutcomeAccumulator> accumulatorByRange = new LinkedHashMap<>();
         for (AgeRange range : AGE_RANGES) {
             accumulatorByRange.put(range, new OutcomeAccumulator());
@@ -197,11 +211,12 @@ public final class QuoteStatisticsCalculator {
         return results;
     }
 
-    private static Map<String, Long> computeTplErrorCounts(List<QuoteRecord> records) {
+    private static Map<String, Long> computeErrorCounts(List<QuoteRecord> records, boolean excludeNullLabel) {
         Map<String, Long> counts = records.stream()
                 .filter(QuoteRecord::isFailure)
                 .map(QuoteRecord::getFailureErrorText)
                 .flatMap(Optional::stream)
+                .filter(label -> !excludeNullLabel || !"null".equalsIgnoreCase(label))
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
         return counts.entrySet().stream()
@@ -209,6 +224,45 @@ public final class QuoteStatisticsCalculator {
                         .thenComparing(Map.Entry::getKey))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (a, b) -> a, LinkedHashMap::new));
+    }
+
+    private static List<QuoteStatistics.ValueRangeStats> computeEstimatedValueRangeStats(List<QuoteRecord> records) {
+        Map<ValueRange, OutcomeAccumulator> accumulatorByRange = new LinkedHashMap<>();
+        for (ValueRange range : VALUE_RANGES) {
+            accumulatorByRange.put(range, new OutcomeAccumulator());
+        }
+        OutcomeAccumulator otherAccumulator = new OutcomeAccumulator();
+
+        for (QuoteRecord record : records) {
+            if (!record.isSuccessful() && !record.isFailure()) {
+                continue;
+            }
+            OutcomeAccumulator accumulator = otherAccumulator;
+            BigDecimal estimatedValue = record.getEstimatedValue();
+            if (estimatedValue != null && estimatedValue.compareTo(BigDecimal.ZERO) > 0) {
+                long numericValue = estimatedValue.longValue();
+                ValueRange matchingRange = findValueRange(numericValue);
+                if (matchingRange != null) {
+                    accumulator = accumulatorByRange.get(matchingRange);
+                }
+            }
+
+            if (record.isSuccessful()) {
+                accumulator.incrementSuccess();
+            } else {
+                accumulator.incrementFailure();
+            }
+        }
+
+        List<QuoteStatistics.ValueRangeStats> results = new ArrayList<>();
+        for (ValueRange range : VALUE_RANGES) {
+            OutcomeAccumulator accumulator = accumulatorByRange.get(range);
+            results.add(accumulator.toValueRangeStats(range.getLabel()));
+        }
+        if (otherAccumulator.total() > 0) {
+            results.add(otherAccumulator.toValueRangeStats(OTHER_VALUE_LABEL));
+        }
+        return results;
     }
 
     private static final class UniqueChassisSummary {
@@ -258,6 +312,10 @@ public final class QuoteStatisticsCalculator {
         private QuoteStatistics.AgeRangeStats toAgeRangeStats(String label) {
             return new QuoteStatistics.AgeRangeStats(label, success, failure);
         }
+
+        private QuoteStatistics.ValueRangeStats toValueRangeStats(String label) {
+            return new QuoteStatistics.ValueRangeStats(label, success, failure);
+        }
     }
 
     private static AgeRange findAgeRange(int age) {
@@ -270,6 +328,7 @@ public final class QuoteStatisticsCalculator {
     }
 
     private static final String OTHER_AGE_LABEL = "Other / Unknown";
+    private static final String OTHER_VALUE_LABEL = "Other / Unknown";
 
     private static final List<AgeRange> AGE_RANGES = List.of(
             new AgeRange(18, 24),
@@ -282,6 +341,19 @@ public final class QuoteStatisticsCalculator {
             new AgeRange(55, 59),
             new AgeRange(60, 64),
             new AgeRange(65, 70)
+    );
+
+    private static final List<ValueRange> VALUE_RANGES = List.of(
+            new ValueRange(5_000, 49_999),
+            new ValueRange(50_000, 99_999),
+            new ValueRange(100_000, 149_999),
+            new ValueRange(150_000, 199_999),
+            new ValueRange(200_000, 249_999),
+            new ValueRange(250_000, 299_999),
+            new ValueRange(300_000, 349_999),
+            new ValueRange(350_000, 399_999),
+            new ValueRange(400_000, 449_999),
+            new ValueRange(450_000, 500_000)
     );
 
     private static final class AgeRange {
@@ -301,6 +373,39 @@ public final class QuoteStatisticsCalculator {
 
         private String getLabel() {
             return label;
+        }
+    }
+
+    private static ValueRange findValueRange(long value) {
+        for (ValueRange range : VALUE_RANGES) {
+            if (range.contains(value)) {
+                return range;
+            }
+        }
+        return null;
+    }
+
+    private static final class ValueRange {
+        private final long startInclusive;
+        private final long endInclusive;
+        private final String label;
+
+        private ValueRange(long startInclusive, long endInclusive) {
+            this.startInclusive = startInclusive;
+            this.endInclusive = endInclusive;
+            this.label = formatLabel(startInclusive, endInclusive);
+        }
+
+        private boolean contains(long value) {
+            return value >= startInclusive && value <= endInclusive;
+        }
+
+        private String getLabel() {
+            return label;
+        }
+
+        private static String formatLabel(long startInclusive, long endInclusive) {
+            return String.format(Locale.US, "%,d–%,d", startInclusive, endInclusive);
         }
     }
 }
