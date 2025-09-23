@@ -2,6 +2,7 @@ package com.example.motorreporting;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,6 +24,10 @@ public class QuoteStatistics {
     private final long tplUniqueChassisFailCount;
     private final long comprehensiveUniqueChassisSuccessCount;
     private final long comprehensiveUniqueChassisFailCount;
+    private final Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes;
+    private final Map<String, OutcomeBreakdown> tplSpecificationOutcomes;
+    private final List<AgeRangeStats> tplAgeRangeStats;
+    private final Map<String, Long> tplErrorCounts;
 
     public QuoteStatistics(QuoteGroupStats tplStats,
                            QuoteGroupStats comprehensiveStats,
@@ -32,7 +37,11 @@ public class QuoteStatistics {
                            long tplUniqueChassisSuccessCount,
                            long tplUniqueChassisFailCount,
                            long comprehensiveUniqueChassisSuccessCount,
-                           long comprehensiveUniqueChassisFailCount) {
+                           long comprehensiveUniqueChassisFailCount,
+                           Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes,
+                           Map<String, OutcomeBreakdown> tplSpecificationOutcomes,
+                           List<AgeRangeStats> tplAgeRangeStats,
+                           Map<String, Long> tplErrorCounts) {
         this.tplStats = Objects.requireNonNull(tplStats, "tplStats");
         this.comprehensiveStats = Objects.requireNonNull(comprehensiveStats, "comprehensiveStats");
         this.uniqueChassisCount = uniqueChassisCount;
@@ -42,6 +51,10 @@ public class QuoteStatistics {
         this.tplUniqueChassisFailCount = tplUniqueChassisFailCount;
         this.comprehensiveUniqueChassisSuccessCount = comprehensiveUniqueChassisSuccessCount;
         this.comprehensiveUniqueChassisFailCount = comprehensiveUniqueChassisFailCount;
+        this.tplBodyCategoryOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplBodyCategoryOutcomes));
+        this.tplSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplSpecificationOutcomes));
+        this.tplAgeRangeStats = List.copyOf(tplAgeRangeStats);
+        this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
     }
 
     public QuoteGroupStats getTplStats() {
@@ -90,6 +103,22 @@ public class QuoteStatistics {
 
     public long getComprehensiveUniqueChassisFailCount() {
         return comprehensiveUniqueChassisFailCount;
+    }
+
+    public Map<String, OutcomeBreakdown> getTplBodyCategoryOutcomes() {
+        return tplBodyCategoryOutcomes;
+    }
+
+    public Map<String, OutcomeBreakdown> getTplSpecificationOutcomes() {
+        return tplSpecificationOutcomes;
+    }
+
+    public List<AgeRangeStats> getTplAgeRangeStats() {
+        return tplAgeRangeStats;
+    }
+
+    public Map<String, Long> getTplErrorCounts() {
+        return tplErrorCounts;
     }
 
     public long getOverallSkipCount() {
@@ -152,6 +181,72 @@ public class QuoteStatistics {
             return Integer.parseInt(label);
         } catch (NumberFormatException ex) {
             return Integer.MAX_VALUE;
+        }
+    }
+
+    public static final class OutcomeBreakdown {
+        private final long successCount;
+        private final long failureCount;
+
+        public OutcomeBreakdown(long successCount, long failureCount) {
+            this.successCount = successCount;
+            this.failureCount = failureCount;
+        }
+
+        public long getSuccessCount() {
+            return successCount;
+        }
+
+        public long getFailureCount() {
+            return failureCount;
+        }
+
+        public long getProcessedTotal() {
+            return successCount + failureCount;
+        }
+    }
+
+    public static final class AgeRangeStats {
+        private final String label;
+        private final long successCount;
+        private final long failureCount;
+
+        public AgeRangeStats(String label, long successCount, long failureCount) {
+            this.label = Objects.requireNonNull(label, "label");
+            this.successCount = successCount;
+            this.failureCount = failureCount;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public long getSuccessCount() {
+            return successCount;
+        }
+
+        public long getFailureCount() {
+            return failureCount;
+        }
+
+        public long getProcessedTotal() {
+            return successCount + failureCount;
+        }
+
+        public double getSuccessRatio() {
+            long total = getProcessedTotal();
+            if (total == 0) {
+                return 0.0;
+            }
+            return (successCount * 100.0) / total;
+        }
+
+        public double getFailureRatio() {
+            long total = getProcessedTotal();
+            if (total == 0) {
+                return 0.0;
+            }
+            return (failureCount * 100.0) / total;
         }
     }
 }
