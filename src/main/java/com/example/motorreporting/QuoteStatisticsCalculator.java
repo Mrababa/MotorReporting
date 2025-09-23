@@ -24,6 +24,8 @@ public final class QuoteStatisticsCalculator {
     private QuoteStatisticsCalculator() {
     }
 
+    private static final int TOP_REJECTED_MODEL_LIMIT = 10;
+
     public static QuoteStatistics calculate(List<QuoteRecord> records) {
         Objects.requireNonNull(records, "records");
 
@@ -53,6 +55,8 @@ public final class QuoteStatisticsCalculator {
                 computeEstimatedValueRangeStats(compRecords);
         Map<String, Long> tplErrorCounts = computeErrorCounts(tplRecords, false);
         Map<String, Long> compErrorCounts = computeErrorCounts(compRecords, true);
+        List<QuoteStatistics.ModelChassisSummary> tplTopRejectedModels =
+                computeTopRejectedModelsByUniqueChassis(tplRecords, TOP_REJECTED_MODEL_LIMIT);
         return new QuoteStatistics(tplStats, compStats,
                 uniqueChassisSummary.getTotal(),
                 uniqueChassisSummary.getSuccessCount(),
@@ -68,6 +72,7 @@ public final class QuoteStatisticsCalculator {
                 tplAgeRangeStats,
                 compAgeRangeStats,
                 compEstimatedValueStats,
+                tplTopRejectedModels,
                 tplErrorCounts,
                 compErrorCounts);
     }
@@ -224,6 +229,39 @@ public final class QuoteStatisticsCalculator {
                         .thenComparing(Map.Entry::getKey))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue,
                         (a, b) -> a, LinkedHashMap::new));
+    }
+
+    private static List<QuoteStatistics.ModelChassisSummary> computeTopRejectedModelsByUniqueChassis(
+            List<QuoteRecord> records,
+            int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
+        Map<String, Set<String>> chassisByModel = new HashMap<>();
+        for (QuoteRecord record : records) {
+            if (!record.isFailure()) {
+                continue;
+            }
+            Optional<String> modelOptional = record.getModel();
+            Optional<String> chassisOptional = record.getChassisNumber();
+            if (modelOptional.isEmpty() || chassisOptional.isEmpty()) {
+                continue;
+            }
+            String model = modelOptional.get();
+            String chassisNumber = chassisOptional.get();
+            if (model.isBlank() || chassisNumber.isBlank()) {
+                continue;
+            }
+            Set<String> uniqueChassis = chassisByModel.computeIfAbsent(model, key -> new LinkedHashSet<>());
+            uniqueChassis.add(chassisNumber);
+        }
+
+        return chassisByModel.entrySet().stream()
+                .map(entry -> new QuoteStatistics.ModelChassisSummary(entry.getKey(), entry.getValue().size()))
+                .sorted(Comparator.comparingLong(QuoteStatistics.ModelChassisSummary::getUniqueChassisCount).reversed()
+                        .thenComparing(QuoteStatistics.ModelChassisSummary::getModel))
+                .limit(limit)
+                .collect(Collectors.toList());
     }
 
     private static List<QuoteStatistics.ValueRangeStats> computeEstimatedValueRangeStats(List<QuoteRecord> records) {
