@@ -34,8 +34,13 @@ public class QuoteStatistics {
     private final List<ManufactureYearStats> comprehensiveManufactureYearStats;
     private final List<ValueRangeStats> comprehensiveEstimatedValueStats;
     private final List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis;
+    private final List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis;
     private final Map<String, Long> tplErrorCounts;
     private final Map<String, Long> comprehensiveErrorCounts;
+    private final List<CategoryCount> uniqueChassisByInsurancePurpose;
+    private final List<CategoryCount> uniqueChassisByBodyType;
+    private final List<CategoryCount> manufactureYearTrend;
+    private final List<CategoryCount> customerAgeTrend;
 
     public QuoteStatistics(QuoteGroupStats tplStats,
                            QuoteGroupStats comprehensiveStats,
@@ -56,8 +61,13 @@ public class QuoteStatistics {
                            List<ManufactureYearStats> comprehensiveManufactureYearStats,
                            List<ValueRangeStats> comprehensiveEstimatedValueStats,
                            List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis,
+                           List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis,
                            Map<String, Long> tplErrorCounts,
-                           Map<String, Long> comprehensiveErrorCounts) {
+                           Map<String, Long> comprehensiveErrorCounts,
+                           List<CategoryCount> uniqueChassisByInsurancePurpose,
+                           List<CategoryCount> uniqueChassisByBodyType,
+                           List<CategoryCount> manufactureYearTrend,
+                           List<CategoryCount> customerAgeTrend) {
         this.tplStats = Objects.requireNonNull(tplStats, "tplStats");
         this.comprehensiveStats = Objects.requireNonNull(comprehensiveStats, "comprehensiveStats");
         this.uniqueChassisCount = uniqueChassisCount;
@@ -77,8 +87,13 @@ public class QuoteStatistics {
         this.comprehensiveManufactureYearStats = List.copyOf(comprehensiveManufactureYearStats);
         this.comprehensiveEstimatedValueStats = List.copyOf(comprehensiveEstimatedValueStats);
         this.tplTopRejectedModelsByUniqueChassis = List.copyOf(tplTopRejectedModelsByUniqueChassis);
+        this.topRequestedMakeModelsByUniqueChassis = List.copyOf(topRequestedMakeModelsByUniqueChassis);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
         this.comprehensiveErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveErrorCounts));
+        this.uniqueChassisByInsurancePurpose = List.copyOf(uniqueChassisByInsurancePurpose);
+        this.uniqueChassisByBodyType = List.copyOf(uniqueChassisByBodyType);
+        this.manufactureYearTrend = List.copyOf(manufactureYearTrend);
+        this.customerAgeTrend = List.copyOf(customerAgeTrend);
     }
 
     public QuoteGroupStats getTplStats() {
@@ -145,6 +160,10 @@ public class QuoteStatistics {
         return tplTopRejectedModelsByUniqueChassis;
     }
 
+    public List<MakeModelChassisSummary> getTopRequestedMakeModelsByUniqueChassis() {
+        return topRequestedMakeModelsByUniqueChassis;
+    }
+
     public Map<String, Long> getTplErrorCounts() {
         return tplErrorCounts;
     }
@@ -175,6 +194,22 @@ public class QuoteStatistics {
 
     public Map<String, Long> getComprehensiveErrorCounts() {
         return comprehensiveErrorCounts;
+    }
+
+    public List<CategoryCount> getUniqueChassisByInsurancePurpose() {
+        return uniqueChassisByInsurancePurpose;
+    }
+
+    public List<CategoryCount> getUniqueChassisByBodyType() {
+        return uniqueChassisByBodyType;
+    }
+
+    public List<CategoryCount> getManufactureYearTrend() {
+        return manufactureYearTrend;
+    }
+
+    public List<CategoryCount> getCustomerAgeTrend() {
+        return customerAgeTrend;
     }
 
     public long getOverallSkipCount() {
@@ -277,6 +312,48 @@ public class QuoteStatistics {
 
         public long getUniqueChassisCount() {
             return uniqueChassisCount;
+        }
+    }
+
+    public static final class MakeModelChassisSummary {
+        private final String make;
+        private final String model;
+        private final long uniqueChassisCount;
+
+        public MakeModelChassisSummary(String make, String model, long uniqueChassisCount) {
+            this.make = Objects.requireNonNull(make, "make");
+            this.model = Objects.requireNonNull(model, "model");
+            this.uniqueChassisCount = uniqueChassisCount;
+        }
+
+        public String getMake() {
+            return make;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public long getUniqueChassisCount() {
+            return uniqueChassisCount;
+        }
+    }
+
+    public static final class CategoryCount {
+        private final String label;
+        private final long count;
+
+        public CategoryCount(String label, long count) {
+            this.label = Objects.requireNonNull(label, "label");
+            this.count = count;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public long getCount() {
+            return count;
         }
     }
 
