@@ -43,18 +43,19 @@ public class QuoteRecord {
             }
         });
 
+        ensureStatusColumn(normalized);
+
         String errorText = getValueIgnoreCase(normalized, "ErrorText");
-        String quoteNumber = extractQuoteNumber(normalized);
-        String derivedStatus = determineStatus(errorText, quoteNumber);
-        if (derivedStatus != null) {
-            setValueIgnoreCase(normalized, "Status", derivedStatus);
-        }
+        String quotationNumber = getValueIgnoreCase(normalized, "QuotationNo");
+        String derivedStatus = determineStatus(errorText, quotationNumber);
+        setValueIgnoreCase(normalized, "Status", derivedStatus);
         normalizeOverrideIsGccSpec(normalized);
 
         String insuranceType = getValueIgnoreCase(normalized, "InsuranceType");
         String status = getValueIgnoreCase(normalized, "Status");
         Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
+        String quoteNumber = extractQuoteNumber(normalized);
 
         return new QuoteRecord(normalized, insuranceType, status, errorText, manufactureYear, estimatedValue, quoteNumber);
     }
@@ -83,13 +84,26 @@ public class QuoteRecord {
         }
     }
 
-    private static String determineStatus(String errorText, String quoteNumber) {
-        boolean hasError = errorText != null && !errorText.isBlank();
-        boolean hasQuoteNumber = quoteNumber != null && !quoteNumber.isBlank();
-        if (hasError) {
+    private static void ensureStatusColumn(Map<String, String> values) {
+        if (!containsKeyIgnoreCase(values, "Status")) {
+            values.put("Status", "");
+        }
+    }
+
+    private static boolean containsKeyIgnoreCase(Map<String, String> values, String key) {
+        for (String currentKey : values.keySet()) {
+            if (currentKey != null && currentKey.equalsIgnoreCase(key)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static String determineStatus(String errorText, String quotationNumber) {
+        if (!isNullLiteral(errorText)) {
             return "Failed";
         }
-        if (hasQuoteNumber) {
+        if (!isNullLiteral(quotationNumber)) {
             return "Pass";
         }
         return "Skipped";
@@ -112,6 +126,14 @@ public class QuoteRecord {
         }
     }
 
+    private static boolean isNullLiteral(String value) {
+        if (value == null) {
+            return true;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() || "Null".equals(trimmed);
+    }
+
     private static String extractQuoteNumber(Map<String, String> values) {
         String[] possibleKeys = {
                 "QuotationNo",
@@ -123,7 +145,7 @@ public class QuoteRecord {
         };
         for (String key : possibleKeys) {
             String value = getValueIgnoreCase(values, key);
-            if (value != null && !value.isBlank()) {
+            if (!isNullLiteral(value)) {
                 return value.trim();
             }
         }
@@ -170,7 +192,7 @@ public class QuoteRecord {
     }
 
     public String getFailureReason() {
-        if (errorText == null || errorText.isBlank()) {
+        if (isNullLiteral(errorText)) {
             return "Unknown";
         }
         return errorText.trim();
@@ -189,11 +211,11 @@ public class QuoteRecord {
     }
 
     public boolean hasQuoteNumber() {
-        return quoteNumber != null && !quoteNumber.isBlank();
+        return !isNullLiteral(quoteNumber);
     }
 
     public boolean hasError() {
-        return errorText != null && !errorText.isBlank();
+        return !isNullLiteral(errorText);
     }
 
     public String getInsuranceType() {
