@@ -6,9 +6,15 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Builds the simplified HTML quote report.
@@ -17,6 +23,13 @@ public class HtmlReportGenerator {
 
     private static final String LOGO_URL = "https://www.shory.com/imgs/master/logo.svg";
     private static final DecimalFormat INTEGER_FORMAT;
+    private static final DateTimeFormatter[] QUOTE_REQUESTED_ON_FORMATS = {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US),
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    };
+    private static final DateTimeFormatter HEADER_DATE_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US);
 
     static {
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
@@ -44,6 +57,7 @@ public class HtmlReportGenerator {
         long totalQuotes = statistics.getOverallTotalQuotes();
         long successCount = statistics.getOverallPassCount();
         long failCount = statistics.getOverallFailCount();
+        String headerText = buildHeaderText(records);
 
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html>\n");
@@ -167,7 +181,9 @@ public class HtmlReportGenerator {
         html.append("    <img src=\"")
                 .append(escapeHtml(LOGO_URL))
                 .append("\" alt=\"Shory company logo\" class=\"company-logo\" loading=\"lazy\">\n");
-        html.append("    <h1>Motor Quote Summary</h1>\n");
+        html.append("    <h1>")
+                .append(escapeHtml(headerText))
+                .append("</h1>\n");
         html.append("    <p>Overview of quote requests with pass and fail counts for each insurance type.</p>\n");
         html.append("  </div>\n");
         html.append("  <section class=\"summary-grid\">\n");
@@ -192,6 +208,99 @@ public class HtmlReportGenerator {
         html.append("</body>\n");
         html.append("</html>\n");
         return html.toString();
+    }
+
+    private String buildHeaderText(List<QuoteRecord> records) {
+        Optional<DateRange> dateRange = findQuoteRequestedOnRange(records);
+        if (dateRange.isPresent()) {
+            DateRange range = dateRange.get();
+            return "Overview of Quote requests Analysis from "
+                    + formatDateForHeader(range.getStart())
+                    + " to "
+                    + formatDateForHeader(range.getEnd());
+        }
+        return "Overview of Quote requests Analysis from N/A to N/A";
+    }
+
+    private Optional<DateRange> findQuoteRequestedOnRange(List<QuoteRecord> records) {
+        LocalDateTime min = null;
+        LocalDateTime max = null;
+        for (QuoteRecord record : records) {
+            Optional<LocalDateTime> requestedOn = extractQuoteRequestedOn(record);
+            if (requestedOn.isEmpty()) {
+                continue;
+            }
+            LocalDateTime value = requestedOn.get();
+            if (min == null || value.isBefore(min)) {
+                min = value;
+            }
+            if (max == null || value.isAfter(max)) {
+                max = value;
+            }
+        }
+        if (min == null || max == null) {
+            return Optional.empty();
+        }
+        return Optional.of(new DateRange(min, max));
+    }
+
+    private Optional<LocalDateTime> extractQuoteRequestedOn(QuoteRecord record) {
+        for (Map.Entry<String, String> entry : record.getRawValues().entrySet()) {
+            String key = entry.getKey();
+            if (key != null && key.equalsIgnoreCase("QuoteRequestedOn")) {
+                String value = entry.getValue();
+                if (value == null) {
+                    return Optional.empty();
+                }
+                return parseQuoteRequestedOn(value.trim());
+            }
+        }
+        return Optional.empty();
+    }
+
+    private Optional<LocalDateTime> parseQuoteRequestedOn(String value) {
+        if (value == null) {
+            return Optional.empty();
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return Optional.empty();
+        }
+        for (DateTimeFormatter formatter : QUOTE_REQUESTED_ON_FORMATS) {
+            try {
+                return Optional.of(LocalDateTime.parse(trimmed, formatter));
+            } catch (DateTimeParseException ex) {
+                // Ignore and try next formatter
+            }
+        }
+        try {
+            LocalDate date = LocalDate.parse(trimmed, DateTimeFormatter.ISO_LOCAL_DATE);
+            return Optional.of(date.atStartOfDay());
+        } catch (DateTimeParseException ex) {
+            return Optional.empty();
+        }
+    }
+
+    private String formatDateForHeader(LocalDateTime dateTime) {
+        return dateTime.toLocalDate().format(HEADER_DATE_FORMAT);
+    }
+
+    private static final class DateRange {
+        private final LocalDateTime start;
+        private final LocalDateTime end;
+
+        private DateRange(LocalDateTime start, LocalDateTime end) {
+            this.start = start;
+            this.end = end;
+        }
+
+        private LocalDateTime getStart() {
+            return start;
+        }
+
+        private LocalDateTime getEnd() {
+            return end;
+        }
     }
 
     private void appendSummaryCard(StringBuilder html, String label, long value, String accentColor) {
