@@ -19,17 +19,29 @@ public class QuoteStatistics {
     private final long uniqueChassisCount;
     private final long uniqueChassisSuccessCount;
     private final long uniqueChassisFailCount;
+    private final long tplUniqueChassisSuccessCount;
+    private final long tplUniqueChassisFailCount;
+    private final long comprehensiveUniqueChassisSuccessCount;
+    private final long comprehensiveUniqueChassisFailCount;
 
     public QuoteStatistics(QuoteGroupStats tplStats,
                            QuoteGroupStats comprehensiveStats,
                            long uniqueChassisCount,
                            long uniqueChassisSuccessCount,
-                           long uniqueChassisFailCount) {
+                           long uniqueChassisFailCount,
+                           long tplUniqueChassisSuccessCount,
+                           long tplUniqueChassisFailCount,
+                           long comprehensiveUniqueChassisSuccessCount,
+                           long comprehensiveUniqueChassisFailCount) {
         this.tplStats = Objects.requireNonNull(tplStats, "tplStats");
         this.comprehensiveStats = Objects.requireNonNull(comprehensiveStats, "comprehensiveStats");
         this.uniqueChassisCount = uniqueChassisCount;
         this.uniqueChassisSuccessCount = uniqueChassisSuccessCount;
         this.uniqueChassisFailCount = uniqueChassisFailCount;
+        this.tplUniqueChassisSuccessCount = tplUniqueChassisSuccessCount;
+        this.tplUniqueChassisFailCount = tplUniqueChassisFailCount;
+        this.comprehensiveUniqueChassisSuccessCount = comprehensiveUniqueChassisSuccessCount;
+        this.comprehensiveUniqueChassisFailCount = comprehensiveUniqueChassisFailCount;
     }
 
     public QuoteGroupStats getTplStats() {
@@ -62,6 +74,22 @@ public class QuoteStatistics {
 
     public long getUniqueChassisFailCount() {
         return uniqueChassisFailCount;
+    }
+
+    public long getTplUniqueChassisSuccessCount() {
+        return tplUniqueChassisSuccessCount;
+    }
+
+    public long getTplUniqueChassisFailCount() {
+        return tplUniqueChassisFailCount;
+    }
+
+    public long getComprehensiveUniqueChassisSuccessCount() {
+        return comprehensiveUniqueChassisSuccessCount;
+    }
+
+    public long getComprehensiveUniqueChassisFailCount() {
+        return comprehensiveUniqueChassisFailCount;
     }
 
     public long getOverallSkipCount() {

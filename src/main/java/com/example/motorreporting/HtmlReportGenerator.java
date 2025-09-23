@@ -62,6 +62,10 @@ public class HtmlReportGenerator {
         long uniqueChassisTotal = statistics.getUniqueChassisCount();
         long uniqueChassisSuccess = statistics.getUniqueChassisSuccessCount();
         long uniqueChassisFail = statistics.getUniqueChassisFailCount();
+        long tplUniqueChassisSuccess = statistics.getTplUniqueChassisSuccessCount();
+        long tplUniqueChassisFail = statistics.getTplUniqueChassisFailCount();
+        long compUniqueChassisSuccess = statistics.getComprehensiveUniqueChassisSuccessCount();
+        long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
         String headerText = buildHeaderText(records);
 
         StringBuilder html = new StringBuilder();
@@ -224,13 +228,19 @@ public class HtmlReportGenerator {
         html.append("        <canvas id=\"compOutcomesChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("      <div class=\"chart-card\">\n");
-        html.append("        <h2>Unique Chassis Outcomes</h2>\n");
-        html.append("        <canvas id=\"uniqueChassisChart\"></canvas>\n");
+        html.append("        <h2>TPL Success vs Failed (Unique Chassis)</h2>\n");
+        html.append("        <canvas id=\"tplUniqueChassisChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Comprehensive Success vs Failed (Unique Chassis)</h2>\n");
+        html.append("        <canvas id=\"compUniqueChassisChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("  </section>\n");
         html.append("</main>\n");
-        html.append(buildScripts(tplStats, compStats, uniqueChassisTotal, uniqueChassisSuccess, uniqueChassisFail));
+        html.append(buildScripts(tplStats, compStats,
+                tplUniqueChassisSuccess, tplUniqueChassisFail,
+                compUniqueChassisSuccess, compUniqueChassisFail));
         html.append("</body>\n");
         html.append("</html>\n");
         return html.toString();
@@ -367,9 +377,10 @@ public class HtmlReportGenerator {
 
     private String buildScripts(QuoteGroupStats tplStats,
                                 QuoteGroupStats compStats,
-                                long uniqueChassisTotal,
-                                long uniqueChassisSuccess,
-                                long uniqueChassisFail) {
+                                long tplUniqueChassisSuccess,
+                                long tplUniqueChassisFail,
+                                long compUniqueChassisSuccess,
+                                long compUniqueChassisFail) {
         StringBuilder script = new StringBuilder();
         script.append("<script src=\"https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js\"></script>\n");
         script.append("<script>\n");
@@ -404,13 +415,23 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const uniqueChassisData = {\n");
-        script.append("    labels: ['Total Unique', 'Success', 'Failed'],\n");
+        script.append("  const tplUniqueChassisData = {\n");
+        script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Unique chassis',\n");
-        script.append("      data: [").append(uniqueChassisTotal).append(',')
-                .append(uniqueChassisSuccess).append(',').append(uniqueChassisFail).append("],\n");
-        script.append("      backgroundColor: ['#2563eb', '#16a34a', '#dc2626'],\n");
+        script.append("      data: [").append(tplUniqueChassisSuccess).append(',')
+                .append(tplUniqueChassisFail).append("],\n");
+        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const compUniqueChassisData = {\n");
+        script.append("    labels: ['Success', 'Failed'],\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Unique chassis',\n");
+        script.append("      data: [").append(compUniqueChassisSuccess).append(',')
+                .append(compUniqueChassisFail).append("],\n");
+        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
@@ -424,9 +445,14 @@ public class HtmlReportGenerator {
         script.append("    data: compData,\n");
         script.append("    options: sharedOptions\n");
         script.append("  });\n");
-        script.append("  new Chart(document.getElementById('uniqueChassisChart'), {\n");
+        script.append("  new Chart(document.getElementById('tplUniqueChassisChart'), {\n");
         script.append("    type: 'bar',\n");
-        script.append("    data: uniqueChassisData,\n");
+        script.append("    data: tplUniqueChassisData,\n");
+        script.append("    options: sharedOptions\n");
+        script.append("  });\n");
+        script.append("  new Chart(document.getElementById('compUniqueChassisChart'), {\n");
+        script.append("    type: 'bar',\n");
+        script.append("    data: compUniqueChassisData,\n");
         script.append("    options: sharedOptions\n");
         script.append("  });\n");
         script.append("</script>\n");
