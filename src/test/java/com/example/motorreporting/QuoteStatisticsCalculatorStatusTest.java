@@ -88,4 +88,101 @@ class QuoteStatisticsCalculatorStatusTest {
         assertEquals(1, statistics.getComprehensiveUniqueChassisSuccessCount());
         assertEquals(1, statistics.getComprehensiveUniqueChassisFailCount());
     }
+
+    @Test
+    void topMakeModelSummariesAreSplitByInsuranceType() {
+        QuoteRecord tplSuccess = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Third Party",
+                "Status", "Success",
+                "ChassisNumber", "TPL-001",
+                "ShoryMakeEn", "Toyota",
+                "ShoryModelEn", "Corolla"
+        ));
+
+        QuoteRecord tplFailure = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Third Party",
+                "Status", "Failed",
+                "ErrorText", "declined",
+                "ChassisNumber", "TPL-002",
+                "ShoryMakeEn", "Toyota",
+                "ShoryModelEn", "Corolla"
+        ));
+
+        QuoteRecord tplSecondSuccess = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Third Party",
+                "Status", "Success",
+                "ChassisNumber", "TPL-003",
+                "ShoryMakeEn", "Nissan",
+                "ShoryModelEn", "Sunny"
+        ));
+
+        QuoteRecord compFailure = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Comprehensive",
+                "Status", "Failed",
+                "ErrorText", "declined",
+                "ChassisNumber", "COMP-001",
+                "ShoryMakeEn", "Toyota",
+                "ShoryModelEn", "Corolla"
+        ));
+
+        QuoteRecord compSuccess = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Comprehensive",
+                "Status", "Success",
+                "ChassisNumber", "COMP-002",
+                "ShoryMakeEn", "Honda",
+                "ShoryModelEn", "Civic"
+        ));
+
+        QuoteRecord compSecondFailure = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Comprehensive",
+                "Status", "Failed",
+                "ErrorText", "declined",
+                "ChassisNumber", "COMP-003",
+                "ShoryMakeEn", "Honda",
+                "ShoryModelEn", "Civic"
+        ));
+
+        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(List.of(
+                tplSuccess,
+                tplFailure,
+                tplSecondSuccess,
+                compFailure,
+                compSuccess,
+                compSecondFailure
+        ));
+
+        List<QuoteStatistics.MakeModelChassisSummary> tplSummaries =
+                statistics.getTplTopRequestedMakeModelsByUniqueChassis();
+        assertEquals(2, tplSummaries.size());
+        QuoteStatistics.MakeModelChassisSummary tplToyota = tplSummaries.get(0);
+        assertEquals("Toyota", tplToyota.getMake());
+        assertEquals("Corolla", tplToyota.getModel());
+        assertEquals(2, tplToyota.getUniqueChassisCount());
+        assertEquals(1, tplToyota.getSuccessfulUniqueChassisCount());
+        assertEquals(1, tplToyota.getFailedUniqueChassisCount());
+
+        QuoteStatistics.MakeModelChassisSummary tplNissan = tplSummaries.get(1);
+        assertEquals("Nissan", tplNissan.getMake());
+        assertEquals("Sunny", tplNissan.getModel());
+        assertEquals(1, tplNissan.getUniqueChassisCount());
+        assertEquals(1, tplNissan.getSuccessfulUniqueChassisCount());
+        assertEquals(0, tplNissan.getFailedUniqueChassisCount());
+
+        List<QuoteStatistics.MakeModelChassisSummary> compSummaries =
+                statistics.getComprehensiveTopRequestedMakeModelsByUniqueChassis();
+        assertEquals(2, compSummaries.size());
+        QuoteStatistics.MakeModelChassisSummary compHonda = compSummaries.get(0);
+        assertEquals("Honda", compHonda.getMake());
+        assertEquals("Civic", compHonda.getModel());
+        assertEquals(2, compHonda.getUniqueChassisCount());
+        assertEquals(1, compHonda.getSuccessfulUniqueChassisCount());
+        assertEquals(1, compHonda.getFailedUniqueChassisCount());
+
+        QuoteStatistics.MakeModelChassisSummary compToyota = compSummaries.get(1);
+        assertEquals("Toyota", compToyota.getMake());
+        assertEquals("Corolla", compToyota.getModel());
+        assertEquals(1, compToyota.getUniqueChassisCount());
+        assertEquals(0, compToyota.getSuccessfulUniqueChassisCount());
+        assertEquals(1, compToyota.getFailedUniqueChassisCount());
+    }
 }

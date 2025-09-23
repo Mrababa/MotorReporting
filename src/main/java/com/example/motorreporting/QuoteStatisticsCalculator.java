@@ -66,6 +66,10 @@ public final class QuoteStatisticsCalculator {
                 computeTopRejectedModelsByUniqueChassis(tplRecords, TOP_REJECTED_MODEL_LIMIT);
         List<QuoteStatistics.MakeModelChassisSummary> topRequestedMakeModels =
                 computeTopMakeModelByUniqueChassis(records, TOP_REQUESTED_MAKE_MODEL_LIMIT);
+        List<QuoteStatistics.MakeModelChassisSummary> tplTopRequestedMakeModels =
+                computeTopMakeModelByUniqueChassis(tplRecords, TOP_REQUESTED_MAKE_MODEL_LIMIT);
+        List<QuoteStatistics.MakeModelChassisSummary> compTopRequestedMakeModels =
+                computeTopMakeModelByUniqueChassis(compRecords, TOP_REQUESTED_MAKE_MODEL_LIMIT);
         List<QuoteStatistics.CategoryCount> uniqueChassisByInsurancePurpose =
                 computeUniqueChassisCounts(records, QuoteRecord::getInsurancePurposeLabel);
         List<QuoteStatistics.CategoryCount> uniqueChassisByBodyType =
@@ -93,6 +97,8 @@ public final class QuoteStatisticsCalculator {
                 compEstimatedValueStats,
                 tplTopRejectedModels,
                 topRequestedMakeModels,
+                tplTopRequestedMakeModels,
+                compTopRequestedMakeModels,
                 tplErrorCounts,
                 compErrorCounts,
                 uniqueChassisByInsurancePurpose,

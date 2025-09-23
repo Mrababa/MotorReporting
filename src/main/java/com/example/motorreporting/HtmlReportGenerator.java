@@ -380,6 +380,8 @@ public class HtmlReportGenerator {
         html.append("      </div>\n");
         html.append("    </div>\n");
         appendOutcomeTable(html, "Specification Outcomes (GCC vs Non-GCC)", tplSpecificationSummary);
+        appendMakeModelTable(html, "Top 20 Make & Model by Unique Chassis (TPL)",
+                statistics.getTplTopRequestedMakeModelsByUniqueChassis());
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card\">\n");
         html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
@@ -433,6 +435,8 @@ public class HtmlReportGenerator {
         html.append("      </div>\n");
         html.append("    </div>\n");
         appendOutcomeTable(html, "Comprehensive Specification Outcomes (GCC vs Non-GCC)", compSpecificationSummary);
+        appendMakeModelTable(html, "Top 20 Make & Model by Unique Chassis (Comprehensive)",
+                statistics.getComprehensiveTopRequestedMakeModelsByUniqueChassis());
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card\">\n");
         html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
