@@ -100,14 +100,15 @@ public class QuoteRecord {
     }
 
     private static String determineStatus(String errorText, String quotationNumber) {
-        if (!isNullLiteral(errorText)) {
+      if (!"NULL".equals(errorText) ) {
             return "Failed";
         }
-        if (!isNullLiteral(quotationNumber)) {
+        if (!"NULL".equals(quotationNumber )) {
             return "Pass";
         }
         return "Skipped";
     }
+
 
     private static void normalizeOverrideIsGccSpec(Map<String, String> values) {
         String rawValue = getValueIgnoreCase(values, "OverrideIsGccSpec");
@@ -118,7 +119,7 @@ public class QuoteRecord {
         String replacement = null;
         if ("1".equals(trimmed)) {
             replacement = "GCC";
-        } else if ("2".equals(trimmed)) {
+        } else if ("0".equals(trimmed)) {
             replacement = "None GCC";
         }
         if (replacement != null) {
