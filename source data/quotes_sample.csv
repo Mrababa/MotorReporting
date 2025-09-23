@@ -1,0 +1,5 @@
+QuoteRequestedOn,Status,ReferenceNumber,InsurancePurpose,ICName,ShoryMakeEn,ShoryModelEn,OverrideIsGccSpec,Age,LicenseIssueDate,BodyCategory,ChassisNumber,InsuranceType,ManufactureYear,RegistrationDate,QuotationNo,EstimatedValue,InsuranceExpiryDate,ErrorText
+2024-01-05 08:15,Success,REF-001,Personal,Alliance,MakeA,ModelX,true,32,2014-09-01,Sedan,CHS1234567890,TPL,2021,2021-02-01,QTN-0001,55000,2024-12-31,
+2024-01-07 10:42,Failed,REF-002,Business,Guardian,MakeB,ModelY,false,41,2009-04-18,SUV,CHS0987654321,Comprehensive,2019,2019-06-15,QTN-0002,78000,2024-11-30,Vehicle inspection required
+2024-01-09 13:20,Failed,REF-003,Personal,Alliance,MakeC,ModelZ,true,28,2016-01-05,Hatchback,CHS5678901234,TPL,2020,2020-03-20,QTN-0003,43000,2024-10-15,Invalid chassis number
+2024-01-11 16:05,Success,REF-004,Business,Guardian,MakeD,ModelQ,true,36,2012-07-11,Truck,CHS2345678901,Comprehensive,2018,2018-05-10,QTN-0004,90000,2025-01-10,

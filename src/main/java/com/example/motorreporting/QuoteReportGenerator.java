@@ -22,7 +22,8 @@ public final class QuoteReportGenerator {
     public static void main(String[] args) {
         Path inputPath;
         try {
-            inputPath = determineInputPath(args);
+            String fileName = args.length > 0 ? args[0] : null;
+            inputPath = resolveInputPath(fileName);
         } catch (IllegalArgumentException ex) {
             System.err.println(ex.getMessage());
             System.err.println("Usage: java -jar motor-reporting.jar <input-file>");
@@ -35,18 +36,7 @@ public final class QuoteReportGenerator {
         }
 
         try {
-            List<QuoteRecord> records = QuoteDataLoader.load(inputPath);
-            if (records.isEmpty()) {
-                System.err.println("No records found in file: " + inputPath);
-            }
-
-            QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(records);
-            Path outputPath = inputPath.toAbsolutePath().getParent() != null
-                    ? inputPath.toAbsolutePath().getParent().resolve("quote_generation_report.pdf")
-                    : Paths.get("quote_generation_report.pdf");
-
-            PdfReportGenerator pdfReportGenerator = new PdfReportGenerator();
-            pdfReportGenerator.generate(outputPath, statistics);
+            Path outputPath = generateReport(inputPath);
             System.out.println("Report generated at: " + outputPath.toAbsolutePath());
         } catch (IOException ex) {
             System.err.println("Failed to generate report: " + ex.getMessage());
@@ -55,19 +45,35 @@ public final class QuoteReportGenerator {
         }
     }
 
-    private static Path determineInputPath(String[] args) throws IOException {
-        if (args.length > 0) {
-            Path provided = Paths.get(args[0]);
+    public static Path resolveInputPath(String fileName) throws IOException {
+        if (fileName != null && !fileName.isBlank()) {
+            Path provided = Paths.get(fileName);
             if (Files.exists(provided)) {
                 return provided;
             }
-            Path fromSourceDirectory = Paths.get(DEFAULT_SOURCE_DIRECTORY).resolve(args[0]);
+            Path fromSourceDirectory = Paths.get(DEFAULT_SOURCE_DIRECTORY).resolve(fileName);
             if (Files.exists(fromSourceDirectory)) {
                 return fromSourceDirectory;
             }
             throw new IllegalArgumentException("Input file not found: " + provided);
         }
         return findSingleFileInSourceDirectory();
+    }
+
+    public static Path generateReport(Path inputPath) throws IOException {
+        List<QuoteRecord> records = QuoteDataLoader.load(inputPath);
+        if (records.isEmpty()) {
+            System.err.println("No records found in file: " + inputPath);
+        }
+
+        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(records);
+        Path outputPath = inputPath.toAbsolutePath().getParent() != null
+                ? inputPath.toAbsolutePath().getParent().resolve("quote_generation_report.pdf")
+                : Paths.get("quote_generation_report.pdf");
+
+        PdfReportGenerator pdfReportGenerator = new PdfReportGenerator();
+        pdfReportGenerator.generate(outputPath, statistics);
+        return outputPath;
     }
 
     private static Path findSingleFileInSourceDirectory() throws IOException {
