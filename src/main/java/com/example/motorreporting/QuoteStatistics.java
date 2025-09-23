@@ -319,11 +319,19 @@ public class QuoteStatistics {
         private final String make;
         private final String model;
         private final long uniqueChassisCount;
+        private final long successfulUniqueChassisCount;
+        private final long failedUniqueChassisCount;
 
-        public MakeModelChassisSummary(String make, String model, long uniqueChassisCount) {
+        public MakeModelChassisSummary(String make,
+                                       String model,
+                                       long uniqueChassisCount,
+                                       long successfulUniqueChassisCount,
+                                       long failedUniqueChassisCount) {
             this.make = Objects.requireNonNull(make, "make");
             this.model = Objects.requireNonNull(model, "model");
             this.uniqueChassisCount = uniqueChassisCount;
+            this.successfulUniqueChassisCount = successfulUniqueChassisCount;
+            this.failedUniqueChassisCount = failedUniqueChassisCount;
         }
 
         public String getMake() {
@@ -336,6 +344,14 @@ public class QuoteStatistics {
 
         public long getUniqueChassisCount() {
             return uniqueChassisCount;
+        }
+
+        public long getSuccessfulUniqueChassisCount() {
+            return successfulUniqueChassisCount;
+        }
+
+        public long getFailedUniqueChassisCount() {
+            return failedUniqueChassisCount;
         }
     }
 
