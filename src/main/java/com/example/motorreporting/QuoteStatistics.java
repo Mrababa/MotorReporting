@@ -35,6 +35,8 @@ public class QuoteStatistics {
     private final List<ValueRangeStats> comprehensiveEstimatedValueStats;
     private final List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis;
+    private final List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis;
+    private final List<MakeModelChassisSummary> comprehensiveTopRequestedMakeModelsByUniqueChassis;
     private final Map<String, Long> tplErrorCounts;
     private final Map<String, Long> comprehensiveErrorCounts;
     private final List<CategoryCount> uniqueChassisByInsurancePurpose;
@@ -62,6 +64,8 @@ public class QuoteStatistics {
                            List<ValueRangeStats> comprehensiveEstimatedValueStats,
                            List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis,
                            List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis,
+                           List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis,
+                           List<MakeModelChassisSummary> comprehensiveTopRequestedMakeModelsByUniqueChassis,
                            Map<String, Long> tplErrorCounts,
                            Map<String, Long> comprehensiveErrorCounts,
                            List<CategoryCount> uniqueChassisByInsurancePurpose,
@@ -88,6 +92,9 @@ public class QuoteStatistics {
         this.comprehensiveEstimatedValueStats = List.copyOf(comprehensiveEstimatedValueStats);
         this.tplTopRejectedModelsByUniqueChassis = List.copyOf(tplTopRejectedModelsByUniqueChassis);
         this.topRequestedMakeModelsByUniqueChassis = List.copyOf(topRequestedMakeModelsByUniqueChassis);
+        this.tplTopRequestedMakeModelsByUniqueChassis = List.copyOf(tplTopRequestedMakeModelsByUniqueChassis);
+        this.comprehensiveTopRequestedMakeModelsByUniqueChassis =
+                List.copyOf(comprehensiveTopRequestedMakeModelsByUniqueChassis);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
         this.comprehensiveErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveErrorCounts));
         this.uniqueChassisByInsurancePurpose = List.copyOf(uniqueChassisByInsurancePurpose);
@@ -162,6 +169,14 @@ public class QuoteStatistics {
 
     public List<MakeModelChassisSummary> getTopRequestedMakeModelsByUniqueChassis() {
         return topRequestedMakeModelsByUniqueChassis;
+    }
+
+    public List<MakeModelChassisSummary> getTplTopRequestedMakeModelsByUniqueChassis() {
+        return tplTopRequestedMakeModelsByUniqueChassis;
+    }
+
+    public List<MakeModelChassisSummary> getComprehensiveTopRequestedMakeModelsByUniqueChassis() {
+        return comprehensiveTopRequestedMakeModelsByUniqueChassis;
     }
 
     public Map<String, Long> getTplErrorCounts() {
