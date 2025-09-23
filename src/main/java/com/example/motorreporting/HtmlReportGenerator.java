@@ -30,6 +30,8 @@ public class HtmlReportGenerator {
     };
     private static final DateTimeFormatter HEADER_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US);
+    private static final String QUOTE_REQUESTED_ON_KEY_NORMALIZED =
+            normalizeHeaderKey("QuoteRequestedOn");
 
     static {
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
@@ -247,7 +249,7 @@ public class HtmlReportGenerator {
     private Optional<LocalDateTime> extractQuoteRequestedOn(QuoteRecord record) {
         for (Map.Entry<String, String> entry : record.getRawValues().entrySet()) {
             String key = entry.getKey();
-            if (key != null && key.equalsIgnoreCase("QuoteRequestedOn")) {
+            if (isQuoteRequestedOnKey(key)) {
                 String value = entry.getValue();
                 if (value == null) {
                     return Optional.empty();
@@ -256,6 +258,15 @@ public class HtmlReportGenerator {
             }
         }
         return Optional.empty();
+    }
+
+    private static boolean isQuoteRequestedOnKey(String key) {
+        if (key == null || key.isEmpty()) {
+            return false;
+        }
+        String normalized = normalizeHeaderKey(key);
+        return normalized.equals(QUOTE_REQUESTED_ON_KEY_NORMALIZED)
+                || normalized.contains(QUOTE_REQUESTED_ON_KEY_NORMALIZED);
     }
 
     private Optional<LocalDateTime> parseQuoteRequestedOn(String value) {
@@ -283,6 +294,20 @@ public class HtmlReportGenerator {
 
     private String formatDateForHeader(LocalDateTime dateTime) {
         return dateTime.toLocalDate().format(HEADER_DATE_FORMAT);
+    }
+
+    private static String normalizeHeaderKey(String key) {
+        if (key == null) {
+            return "";
+        }
+        StringBuilder normalized = new StringBuilder(key.length());
+        for (int i = 0; i < key.length(); i++) {
+            char ch = key.charAt(i);
+            if (Character.isLetterOrDigit(ch)) {
+                normalized.append(Character.toLowerCase(ch));
+            }
+        }
+        return normalized.toString();
     }
 
     private static final class DateRange {
