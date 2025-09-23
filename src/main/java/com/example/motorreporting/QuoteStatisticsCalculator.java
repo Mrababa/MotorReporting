@@ -37,13 +37,15 @@ public final class QuoteStatisticsCalculator {
             return QuoteGroupStats.empty(groupType);
         }
 
-        long total = records.size();
         long passCount = records.stream().filter(QuoteRecord::isSuccessful).count();
-        long failCount = total - passCount;
-        double failurePercentage = total == 0 ? 0.0 : (failCount * 100.0) / total;
+        long failCount = records.stream().filter(QuoteRecord::isFailure).count();
+        long skipCount = records.stream().filter(QuoteRecord::isSkipped).count();
+        long total = passCount + failCount + skipCount;
+        long processedCount = passCount + failCount;
+        double failurePercentage = processedCount == 0 ? 0.0 : (failCount * 100.0) / processedCount;
 
         Map<String, Long> failureReasons = records.stream()
-                .filter(record -> !record.isSuccessful())
+                .filter(QuoteRecord::isFailure)
                 .collect(Collectors.groupingBy(QuoteRecord::getFailureReason, Collectors.counting()));
 
         Map<String, Long> sortedFailureReasons = failureReasons.entrySet().stream()
@@ -53,7 +55,7 @@ public final class QuoteStatisticsCalculator {
                         (a, b) -> a, LinkedHashMap::new));
 
         Map<String, Long> failuresByYear = records.stream()
-                .filter(record -> !record.isSuccessful())
+                .filter(QuoteRecord::isFailure)
                 .collect(Collectors.groupingBy(record ->
                         record.getManufactureYear().map(String::valueOf).orElse("Unknown"),
                         Collectors.counting()));
@@ -64,12 +66,12 @@ public final class QuoteStatisticsCalculator {
                         (a, b) -> a, LinkedHashMap::new));
 
         BigDecimal totalBlocked = records.stream()
-                .filter(record -> !record.isSuccessful())
+                .filter(QuoteRecord::isFailure)
                 .map(QuoteRecord::getEstimatedValue)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
 
-        return new QuoteGroupStats(groupType, total, passCount, failCount, failurePercentage,
+        return new QuoteGroupStats(groupType, total, passCount, failCount, skipCount, failurePercentage,
                 sortedFailureReasons, sortedFailuresByYear, totalBlocked);
     }
 

@@ -76,6 +76,32 @@ public final class ChartCreator {
         return chart;
     }
 
+    public static JFreeChart createFailureByYearBarChart(QuoteGroupStats stats) {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        Map<String, Long> failuresByYear = stats.getFailuresByManufactureYear();
+
+        if (failuresByYear.isEmpty()) {
+            dataset.addValue(0, stats.getGroupType().getShortLabel(), "No Data");
+        } else {
+            failuresByYear.forEach((year, count) ->
+                    dataset.addValue(count, stats.getGroupType().getShortLabel(), year));
+        }
+
+        String title = stats.getGroupType().getDisplayName() + " - Failures by Manufacture Year";
+        JFreeChart chart = ChartFactory.createBarChart(
+                title,
+                "Manufacture Year",
+                "Failed Quotes",
+                dataset,
+                PlotOrientation.VERTICAL,
+                false,
+                true,
+                false);
+        chart.setBackgroundPaint(Color.WHITE);
+        chart.getTitle().setFont(new Font("SansSerif", Font.BOLD, 14));
+        return chart;
+    }
+
     public static JFreeChart createKpiSummaryChart(QuoteStatistics statistics) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
         QuoteGroupStats tpl = statistics.getTplStats();

@@ -41,12 +41,20 @@ public class QuoteStatistics {
         return tplStats.getFailCount() + comprehensiveStats.getFailCount();
     }
 
+    public long getOverallSkipCount() {
+        return tplStats.getSkipCount() + comprehensiveStats.getSkipCount();
+    }
+
+    public long getOverallProcessedQuotes() {
+        return getOverallPassCount() + getOverallFailCount();
+    }
+
     public double getOverallFailurePercentage() {
-        long total = getOverallTotalQuotes();
-        if (total == 0) {
+        long processed = getOverallProcessedQuotes();
+        if (processed == 0) {
             return 0.0;
         }
-        return (getOverallFailCount() * 100.0) / total;
+        return (getOverallFailCount() * 100.0) / processed;
     }
 
     public BigDecimal getOverallBlockedEstimatedValue() {
