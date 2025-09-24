@@ -266,7 +266,7 @@ public final class QuoteDataLoader {
     private static List<QuoteRecord> readCsvRecords(CSVReader csvReader) throws IOException {
         List<QuoteRecord> records = new ArrayList<>();
         try {
-            String[] headers = csvReader.readNext();
+            String[] headers = readHeaderRow(csvReader);
             if (headers == null) {
                 return records;
             }
@@ -303,6 +303,30 @@ public final class QuoteDataLoader {
             throw new IOException("Unable to parse CSV file", ex);
         }
         return records;
+    }
+
+    private static String[] readHeaderRow(CSVReader csvReader) throws IOException, CsvValidationException {
+        String[] headers = csvReader.readNext();
+        while (headers != null) {
+            if (isRowEmpty(headers) || isSeparatorDirective(headers)) {
+                headers = csvReader.readNext();
+                continue;
+            }
+            break;
+        }
+        return headers;
+    }
+
+    private static boolean isSeparatorDirective(String[] row) {
+        if (row.length != 1) {
+            return false;
+        }
+        String value = row[0];
+        if (value == null) {
+            return false;
+        }
+        String trimmed = stripBom(value).trim();
+        return trimmed.regionMatches(true, 0, "sep=", 0, 4);
     }
 
     private static List<Charset> buildCsvCharsetCandidates(Path filePath) throws IOException {
