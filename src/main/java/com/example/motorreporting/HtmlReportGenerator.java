@@ -9,10 +9,10 @@ import java.text.DecimalFormatSymbols;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -28,15 +28,8 @@ public class HtmlReportGenerator {
     private static final String LOGO_URL = "https://www.shory.com/imgs/master/logo.svg";
     private static final DecimalFormat INTEGER_FORMAT;
     private static final DecimalFormat PERCENT_FORMAT;
-    private static final DateTimeFormatter[] QUOTE_REQUESTED_ON_FORMATS = {
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
-            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US),
-            DateTimeFormatter.ISO_LOCAL_DATE_TIME
-    };
     private static final DateTimeFormatter HEADER_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US);
-    private static final String QUOTE_REQUESTED_ON_KEY_NORMALIZED =
-            normalizeHeaderKey("QuoteRequestedOn");
     private static final String SPEC_GCC_LABEL = "GCC";
     private static final String SPEC_NON_GCC_LABEL = "Non GCC";
     private static final String SPEC_UNKNOWN_LABEL = "Unknown";
@@ -49,21 +42,27 @@ public class HtmlReportGenerator {
         PERCENT_FORMAT = new DecimalFormat("#0.0%", symbols);
     }
 
-    public void generate(Path outputPath, QuoteStatistics statistics, List<QuoteRecord> records) throws IOException {
+    public void generate(Path outputPath,
+                         QuoteStatistics statistics,
+                         List<QuoteRecord> records,
+                         ReportDateRange reportDateRange) throws IOException {
         Objects.requireNonNull(outputPath, "outputPath");
         Objects.requireNonNull(statistics, "statistics");
         Objects.requireNonNull(records, "records");
+        Objects.requireNonNull(reportDateRange, "reportDateRange");
 
         Path parent = outputPath.getParent();
         if (parent != null) {
             Files.createDirectories(parent);
         }
 
-        String html = buildHtml(statistics, records);
+        String html = buildHtml(statistics, records, reportDateRange);
         Files.writeString(outputPath, html, StandardCharsets.UTF_8);
     }
 
-    private String buildHtml(QuoteStatistics statistics, List<QuoteRecord> records) {
+    private String buildHtml(QuoteStatistics statistics,
+                             List<QuoteRecord> records,
+                             ReportDateRange reportDateRange) {
         QuoteGroupStats tplStats = statistics.getTplStats();
         QuoteGroupStats compStats = statistics.getComprehensiveStats();
         Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecificationSummary =
@@ -77,15 +76,12 @@ public class HtmlReportGenerator {
         long uniqueChassisTotal = statistics.getUniqueChassisCount();
         long uniqueChassisSuccess = statistics.getUniqueChassisSuccessCount();
         long uniqueChassisFail = statistics.getUniqueChassisFailCount();
-        long tplUniqueChassisSuccess = statistics.getTplUniqueChassisSuccessCount();
-        long tplUniqueChassisFail = statistics.getTplUniqueChassisFailCount();
         QuoteStatistics.EidChassisSummary tplEidChassisSummary = statistics.getTplEidChassisSummary();
         long tplEidChassisTotal = tplEidChassisSummary.getTotalRequests();
         long tplEidChassisUnique = tplEidChassisSummary.getUniqueRequests();
         long tplEidChassisDuplicates = tplEidChassisSummary.getDuplicateRequests();
-        long compUniqueChassisSuccess = statistics.getComprehensiveUniqueChassisSuccessCount();
-        long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
-        String headerText = buildHeaderText(records);
+        String headerText = buildHeaderText(records, reportDateRange);
+        Optional<String> insuranceCompanyName = findInsuranceCompanyName(records);
 
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html>\n");
@@ -113,11 +109,35 @@ public class HtmlReportGenerator {
         html.append("            text-align: center;\n");
         html.append("            margin-bottom: 3rem;\n");
         html.append("        }\n");
+        html.append("        .company-identity {\n");
+        html.append("            display: flex;\n");
+        html.append("            align-items: center;\n");
+        html.append("            justify-content: center;\n");
+        html.append("            gap: 1.25rem;\n");
+        html.append("            flex-wrap: wrap;\n");
+        html.append("            margin-bottom: 1.75rem;\n");
+        html.append("        }\n");
         html.append("        .company-logo {\n");
         html.append("            width: clamp(140px, 18vw, 180px);\n");
         html.append("            height: auto;\n");
-        html.append("            margin: 0 auto 1.75rem;\n");
+        html.append("        }\n");
+        html.append("        .company-name-wrapper {\n");
+        html.append("            text-align: left;\n");
+        html.append("        }\n");
+        html.append("        .company-label {\n");
         html.append("            display: block;\n");
+        html.append("            text-transform: uppercase;\n");
+        html.append("            letter-spacing: 0.08em;\n");
+        html.append("            font-size: 0.75rem;\n");
+        html.append("            font-weight: 600;\n");
+        html.append("            color: #6b7280;\n");
+        html.append("            margin-bottom: 0.35rem;\n");
+        html.append("        }\n");
+        html.append("        .company-name {\n");
+        html.append("            display: block;\n");
+        html.append("            font-size: 1.2rem;\n");
+        html.append("            font-weight: 600;\n");
+        html.append("            color: #0d1b3e;\n");
         html.append("        }\n");
         html.append("        .page-header h1 {\n");
         html.append("            margin: 0 0 0.75rem;\n");
@@ -294,9 +314,19 @@ public class HtmlReportGenerator {
         html.append("<body>\n");
         html.append("<main>\n");
         html.append("  <div class=\"page-header\">\n");
-        html.append("    <img src=\"")
+        html.append("    <div class=\"company-identity\">\n");
+        html.append("      <img src=\"")
                 .append(escapeHtml(LOGO_URL))
                 .append("\" alt=\"Shory company logo\" class=\"company-logo\" loading=\"lazy\">\n");
+        if (insuranceCompanyName.isPresent()) {
+            html.append("      <div class=\"company-name-wrapper\">\n");
+            html.append("        <span class=\"company-label\">Insurance Company</span>\n");
+            html.append("        <span class=\"company-name\">")
+                    .append(escapeHtml(insuranceCompanyName.get()))
+                    .append("</span>\n");
+            html.append("      </div>\n");
+        }
+        html.append("    </div>\n");
         html.append("    <h1>")
                 .append(escapeHtml(headerText))
                 .append("</h1>\n");
@@ -330,14 +360,6 @@ public class HtmlReportGenerator {
         html.append("        <div class=\"chart-card\">\n");
         html.append("          <h2>Comprehensive Success vs Failed</h2>\n");
         html.append("          <canvas id=\"compOutcomesChart\"></canvas>\n");
-        html.append("        </div>\n");
-        html.append("        <div class=\"chart-card\">\n");
-        html.append("          <h2>TPL Success vs Failed (Unique Chassis)</h2>\n");
-        html.append("          <canvas id=\"tplUniqueChassisChart\"></canvas>\n");
-        html.append("        </div>\n");
-        html.append("        <div class=\"chart-card\">\n");
-        html.append("          <h2>Comprehensive Success vs Failed (Unique Chassis)</h2>\n");
-        html.append("          <canvas id=\"compUniqueChassisChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("        <div class=\"chart-card chart-card--wide\">\n");
         html.append("          <h2>Manufacture Year Trend</h2>\n");
@@ -490,7 +512,16 @@ public class HtmlReportGenerator {
         return html.toString();
     }
 
-    private String buildHeaderText(List<QuoteRecord> records) {
+    private String buildHeaderText(List<QuoteRecord> records, ReportDateRange reportDateRange) {
+        if (reportDateRange.hasSelection()) {
+            String startText = reportDateRange.getStartDate()
+                    .map(this::formatDateForHeader)
+                    .orElse("N/A");
+            String endText = reportDateRange.getEndDate()
+                    .map(this::formatDateForHeader)
+                    .orElse("N/A");
+            return "Overview of Quote requests Analysis from " + startText + " to " + endText;
+        }
         Optional<DateRange> dateRange = findQuoteRequestedOnRange(records);
         if (dateRange.isPresent()) {
             DateRange range = dateRange.get();
@@ -506,7 +537,7 @@ public class HtmlReportGenerator {
         LocalDateTime min = null;
         LocalDateTime max = null;
         for (QuoteRecord record : records) {
-            Optional<LocalDateTime> requestedOn = extractQuoteRequestedOn(record);
+            Optional<LocalDateTime> requestedOn = record.getQuoteRequestedOn();
             if (requestedOn.isEmpty()) {
                 continue;
             }
@@ -524,68 +555,29 @@ public class HtmlReportGenerator {
         return Optional.of(new DateRange(min, max));
     }
 
-    private Optional<LocalDateTime> extractQuoteRequestedOn(QuoteRecord record) {
-        for (Map.Entry<String, String> entry : record.getRawValues().entrySet()) {
-            String key = entry.getKey();
-            if (isQuoteRequestedOnKey(key)) {
-                String value = entry.getValue();
-                if (value == null) {
-                    return Optional.empty();
-                }
-                return parseQuoteRequestedOn(value.trim());
-            }
+    private Optional<String> findInsuranceCompanyName(List<QuoteRecord> records) {
+        LinkedHashSet<String> uniqueNames = new LinkedHashSet<>();
+        for (QuoteRecord record : records) {
+            record.getInsuranceCompanyName()
+                    .map(String::trim)
+                    .filter(name -> !name.isEmpty())
+                    .ifPresent(uniqueNames::add);
         }
-        return Optional.empty();
-    }
-
-    private static boolean isQuoteRequestedOnKey(String key) {
-        if (key == null || key.isEmpty()) {
-            return false;
-        }
-        String normalized = normalizeHeaderKey(key);
-        return normalized.equals(QUOTE_REQUESTED_ON_KEY_NORMALIZED)
-                || normalized.contains(QUOTE_REQUESTED_ON_KEY_NORMALIZED);
-    }
-
-    private Optional<LocalDateTime> parseQuoteRequestedOn(String value) {
-        if (value == null) {
+        if (uniqueNames.isEmpty()) {
             return Optional.empty();
         }
-        String trimmed = value.trim();
-        if (trimmed.isEmpty()) {
-            return Optional.empty();
+        if (uniqueNames.size() == 1) {
+            return Optional.of(uniqueNames.iterator().next());
         }
-        for (DateTimeFormatter formatter : QUOTE_REQUESTED_ON_FORMATS) {
-            try {
-                return Optional.of(LocalDateTime.parse(trimmed, formatter));
-            } catch (DateTimeParseException ex) {
-                // Ignore and try next formatter
-            }
-        }
-        try {
-            LocalDate date = LocalDate.parse(trimmed, DateTimeFormatter.ISO_LOCAL_DATE);
-            return Optional.of(date.atStartOfDay());
-        } catch (DateTimeParseException ex) {
-            return Optional.empty();
-        }
+        return Optional.of(String.join(" / ", uniqueNames));
     }
 
     private String formatDateForHeader(LocalDateTime dateTime) {
         return dateTime.toLocalDate().format(HEADER_DATE_FORMAT);
     }
 
-    private static String normalizeHeaderKey(String key) {
-        if (key == null) {
-            return "";
-        }
-        StringBuilder normalized = new StringBuilder(key.length());
-        for (int i = 0; i < key.length(); i++) {
-            char ch = key.charAt(i);
-            if (Character.isLetterOrDigit(ch)) {
-                normalized.append(Character.toLowerCase(ch));
-            }
-        }
-        return normalized.toString();
+    private String formatDateForHeader(LocalDate date) {
+        return date.format(HEADER_DATE_FORMAT);
     }
 
     private static final class DateRange {
@@ -954,13 +946,9 @@ public class HtmlReportGenerator {
                                 Map<String, QuoteStatistics.OutcomeBreakdown> compSpecSummary) {
         QuoteGroupStats tplStats = statistics.getTplStats();
         QuoteGroupStats compStats = statistics.getComprehensiveStats();
-        long tplUniqueChassisSuccess = statistics.getTplUniqueChassisSuccessCount();
-        long tplUniqueChassisFail = statistics.getTplUniqueChassisFailCount();
         QuoteStatistics.EidChassisSummary tplEidChassisSummary = statistics.getTplEidChassisSummary();
         long tplEidChassisTotal = tplEidChassisSummary.getTotalRequests();
         long tplEidChassisUnique = tplEidChassisSummary.getUniqueRequests();
-        long compUniqueChassisSuccess = statistics.getComprehensiveUniqueChassisSuccessCount();
-        long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
 
         Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyOutcomes = statistics.getTplBodyCategoryOutcomes();
         Map<String, QuoteStatistics.OutcomeBreakdown> compBodyOutcomes = statistics.getComprehensiveBodyCategoryOutcomes();
@@ -1190,30 +1178,12 @@ public class HtmlReportGenerator {
         script.append("      fill: true\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const tplUniqueChassisData = {\n");
-        script.append("    labels: ['Success', 'Failed'],\n");
-        script.append("    datasets: [{\n");
-        script.append("      label: 'Unique chassis',\n");
-        script.append("      data: [").append(tplUniqueChassisSuccess).append(',').append(tplUniqueChassisFail).append("],\n");
-        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
-        script.append("      borderRadius: 8\n");
-        script.append("    }]\n");
-        script.append("  };\n");
         script.append("  const tplEidChassisDedupData = {\n");
         script.append("    labels: ['Total Requests', 'Unique Requests'],\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Requests',\n");
         script.append("      data: [").append(tplEidChassisTotal).append(',').append(tplEidChassisUnique).append("],\n");
         script.append("      backgroundColor: ['#2563eb', '#16a34a'],\n");
-        script.append("      borderRadius: 8\n");
-        script.append("    }]\n");
-        script.append("  };\n");
-        script.append("  const compUniqueChassisData = {\n");
-        script.append("    labels: ['Success', 'Failed'],\n");
-        script.append("    datasets: [{\n");
-        script.append("      label: 'Unique chassis',\n");
-        script.append("      data: [").append(compUniqueChassisSuccess).append(',').append(compUniqueChassisFail).append("],\n");
-        script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
@@ -1398,9 +1368,7 @@ public class HtmlReportGenerator {
         script.append("  };\n");
         script.append("  new Chart(document.getElementById('tplOutcomesChart'), { type: 'bar', data: tplData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compOutcomesChart'), { type: 'bar', data: compData, options: sharedOptions });\n");
-        script.append("  new Chart(document.getElementById('tplUniqueChassisChart'), { type: 'bar', data: tplUniqueChassisData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplEidChassisDedupChart'), { type: 'bar', data: tplEidChassisDedupData, options: sharedOptions });\n");
-        script.append("  new Chart(document.getElementById('compUniqueChassisChart'), { type: 'bar', data: compUniqueChassisData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodySuccessChart'), { type: 'bar', data: tplBodySuccessData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodyFailureChart'), { type: 'bar', data: tplBodyFailureData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplSpecGccChart'), { type: 'bar', data: tplSpecGccData, options: sharedOptions });\n");

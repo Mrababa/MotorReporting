@@ -1,6 +1,10 @@
 package com.example.motorreporting;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
@@ -18,6 +22,7 @@ public class QuoteRecord {
     private final String insuranceType;
     private final String status;
     private final String insurancePurpose;
+    private final String insuranceCompanyName;
     private final String errorText;
     private final String quoteNumber;
     private final Integer manufactureYear;
@@ -30,11 +35,19 @@ public class QuoteRecord {
     private final String model;
     private final String make;
     private final Integer driverAge;
+    private final LocalDateTime quoteRequestedOn;
+
+    private static final DateTimeFormatter[] QUOTE_REQUESTED_ON_FORMATS = {
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss", Locale.US),
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm", Locale.US),
+            DateTimeFormatter.ISO_LOCAL_DATE_TIME
+    };
 
     private QuoteRecord(Map<String, String> rawValues,
                         String insuranceType,
                         String status,
                         String insurancePurpose,
+                        String insuranceCompanyName,
                         String errorText,
                         Integer manufactureYear,
                         BigDecimal estimatedValue,
@@ -46,11 +59,13 @@ public class QuoteRecord {
                         String overrideSpecification,
                         Integer driverAge,
                         String model,
-                        String make) {
+                        String make,
+                        LocalDateTime quoteRequestedOn) {
         this.rawValues = Collections.unmodifiableMap(new HashMap<>(rawValues));
         this.insuranceType = insuranceType;
         this.status = status;
         this.insurancePurpose = insurancePurpose;
+        this.insuranceCompanyName = insuranceCompanyName;
         this.errorText = errorText;
         this.manufactureYear = manufactureYear;
         this.estimatedValue = estimatedValue;
@@ -63,6 +78,7 @@ public class QuoteRecord {
         this.model = model;
         this.make = make;
         this.driverAge = driverAge;
+        this.quoteRequestedOn = quoteRequestedOn;
     }
 
     public static QuoteRecord fromValues(Map<String, String> values) {
@@ -85,6 +101,7 @@ public class QuoteRecord {
         String insuranceType = getValueIgnoreCase(normalized, "InsuranceType");
         String status = outcome.getDisplayLabel();
         String insurancePurpose = normalizeCategoricalValue(getValueIgnoreCase(normalized, "InsurancePurpose"));
+        String insuranceCompanyName = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ICName"));
         Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
         String quoteNumber = extractQuoteNumber(normalized);
@@ -95,9 +112,11 @@ public class QuoteRecord {
         String model = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ShoryModelEn"));
         String make = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ShoryMakeEn"));
         String eid = extractEid(normalized);
+        LocalDateTime quoteRequestedOn = parseQuoteRequestedOn(getValueIgnoreCase(normalized, "QuoteRequestedOn"));
 
-        return new QuoteRecord(normalized, insuranceType, status, insurancePurpose, errorText, manufactureYear, estimatedValue,
-                quoteNumber, chassisNumber, eid, outcome, bodyCategory, overrideSpec, driverAge, model, make);
+        return new QuoteRecord(normalized, insuranceType, status, insurancePurpose, insuranceCompanyName, errorText,
+                manufactureYear, estimatedValue, quoteNumber, chassisNumber, eid, outcome, bodyCategory, overrideSpec,
+                driverAge, model, make, quoteRequestedOn);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
@@ -272,6 +291,29 @@ public class QuoteRecord {
         return null;
     }
 
+    private static LocalDateTime parseQuoteRequestedOn(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        for (DateTimeFormatter formatter : QUOTE_REQUESTED_ON_FORMATS) {
+            try {
+                return LocalDateTime.parse(trimmed, formatter);
+            } catch (DateTimeParseException ex) {
+                // try next
+            }
+        }
+        try {
+            LocalDate date = LocalDate.parse(trimmed, DateTimeFormatter.ISO_LOCAL_DATE);
+            return date.atStartOfDay();
+        } catch (DateTimeParseException ex) {
+            return null;
+        }
+    }
+
     private static String normalizeChassisNumber(String value) {
         if (isNullLiteral(value)) {
             return null;
@@ -407,8 +449,16 @@ public class QuoteRecord {
         return Optional.ofNullable(chassisNumber);
     }
 
+    public Optional<String> getInsuranceCompanyName() {
+        return Optional.ofNullable(insuranceCompanyName);
+    }
+
     public Optional<String> getEid() {
         return Optional.ofNullable(eid);
+    }
+
+    public Optional<LocalDateTime> getQuoteRequestedOn() {
+        return Optional.ofNullable(quoteRequestedOn);
     }
 
     public boolean hasQuoteNumber() {

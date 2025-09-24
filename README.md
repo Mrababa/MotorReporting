@@ -32,6 +32,21 @@ mvn clean package
 java -jar target/motor-reporting-1.0-SNAPSHOT-jar-with-dependencies.jar /path/to/quotes.xlsx
 ```
 
+### Limiting the reporting window
+
+The generated reports can be restricted to a specific `QuoteRequestedOn` date range.
+Set the inclusive boundaries via environment variables or JVM system properties using
+the ISO `yyyy-MM-dd` format:
+
+```bash
+REPORT_START_DATE=2024-01-01 REPORT_END_DATE=2024-01-31 \
+  java -jar target/motor-reporting-1.0-SNAPSHOT-jar-with-dependencies.jar /path/to/quotes.xlsx
+```
+
+Alternatively, use `-Dreport.startDate=...` and `-Dreport.endDate=...` when launching
+the JVM. Records without a `QuoteRequestedOn` value are skipped whenever a filter is
+active.
+
 The command now executes three sequential steps:
 
 1. Cleans the dataset and writes `quote_generation_cleaned.csv` beside the source file.
