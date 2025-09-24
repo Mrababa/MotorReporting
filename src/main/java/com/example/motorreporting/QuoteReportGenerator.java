@@ -5,6 +5,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -72,15 +73,28 @@ public final class QuoteReportGenerator {
             System.err.println("No records found in file: " + inputPath);
         }
 
+        ReportDateRange reportDateRange = ReportDateRange.fromEnvironment();
+        List<QuoteRecord> filteredRecords = reportDateRange.filter(records);
+        if (reportDateRange.hasSelection()) {
+            System.out.println("Applying QuoteRequestedOn filter from "
+                    + reportDateRange.getStartDate().map(LocalDate::toString).orElse("N/A")
+                    + " to "
+                    + reportDateRange.getEndDate().map(LocalDate::toString).orElse("N/A")
+                    + ". Retained " + filteredRecords.size() + " of " + records.size() + " records.");
+        }
+        if (filteredRecords.isEmpty()) {
+            System.err.println("No records matched the configured QuoteRequestedOn range. Generating an empty report.");
+        }
+
         Path outputDirectory = determineOutputDirectory(inputPath);
 
-        Path cleanedDataPath = QuoteDataCleaner.writeCleanFile(outputDirectory, records);
+        Path cleanedDataPath = QuoteDataCleaner.writeCleanFile(outputDirectory, filteredRecords);
 
-        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(records);
+        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(filteredRecords);
 
         Path htmlReportPath = outputDirectory.resolve("quote_generation_report.html");
         HtmlReportGenerator htmlReportGenerator = new HtmlReportGenerator();
-        htmlReportGenerator.generate(htmlReportPath, statistics, records);
+        htmlReportGenerator.generate(htmlReportPath, statistics, filteredRecords, reportDateRange);
 
         Path pdfReportPath = outputDirectory.resolve("quote_generation_report.pdf");
         PdfReportGenerator pdfReportGenerator = new PdfReportGenerator();

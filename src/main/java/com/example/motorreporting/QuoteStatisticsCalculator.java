@@ -179,6 +179,14 @@ public final class QuoteStatisticsCalculator {
         }
     }
 
+    private static int ageOrderKey(String label) {
+        try {
+            return Integer.parseInt(label);
+        } catch (NumberFormatException ex) {
+            return Integer.MAX_VALUE;
+        }
+    }
+
     private static UniqueChassisSummary computeUniqueChassisSummary(List<QuoteRecord> records) {
         Set<String> uniqueValues = new LinkedHashSet<>();
         Set<String> successValues = new LinkedHashSet<>();
@@ -377,56 +385,69 @@ public final class QuoteStatisticsCalculator {
     }
 
     private static List<QuoteStatistics.CategoryCount> computeManufactureYearTrend(List<QuoteRecord> records) {
-        TreeMap<Integer, Long> counts = new TreeMap<>();
-        long unknownCount = 0L;
+        Map<String, String> chassisToLabel = new LinkedHashMap<>();
         for (QuoteRecord record : records) {
-            Optional<Integer> manufactureYear = record.getManufactureYear();
-            if (manufactureYear.isPresent()) {
-                counts.merge(manufactureYear.get(), 1L, Long::sum);
-            } else {
-                unknownCount++;
+            Optional<String> chassisOptional = record.getChassisNumber();
+            if (chassisOptional.isEmpty()) {
+                continue;
+            }
+            String chassis = chassisOptional.get();
+            String label = record.getManufactureYear()
+                    .map(String::valueOf)
+                    .orElse("Unknown");
+            String existing = chassisToLabel.get(chassis);
+            if (existing == null || ("Unknown".equals(existing) && !"Unknown".equals(label))) {
+                chassisToLabel.put(chassis, label);
             }
         }
-        List<QuoteStatistics.CategoryCount> results = new ArrayList<>();
-        for (Map.Entry<Integer, Long> entry : counts.entrySet()) {
-            results.add(new QuoteStatistics.CategoryCount(String.valueOf(entry.getKey()), entry.getValue()));
+
+        if (chassisToLabel.isEmpty()) {
+            return List.of(new QuoteStatistics.CategoryCount("No Data", 0));
         }
-        if (unknownCount > 0) {
-            results.add(new QuoteStatistics.CategoryCount("Unknown", unknownCount));
+
+        Map<String, Long> counts = new HashMap<>();
+        for (String label : chassisToLabel.values()) {
+            counts.merge(label, 1L, Long::sum);
         }
-        if (results.isEmpty()) {
-            results.add(new QuoteStatistics.CategoryCount("No Data", 0));
-        }
-        return results;
+
+        return counts.entrySet().stream()
+                .sorted(Comparator
+                        .comparingInt(entry -> yearOrderKey(entry.getKey()))
+                        .thenComparing(Map.Entry::getKey))
+                .map(entry -> new QuoteStatistics.CategoryCount(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
     }
 
     private static List<QuoteStatistics.CategoryCount> computeCustomerAgeTrend(List<QuoteRecord> records) {
-        TreeMap<Integer, Long> counts = new TreeMap<>();
-        long unknownCount = 0L;
+        Map<String, Integer> ageByEid = new LinkedHashMap<>();
         for (QuoteRecord record : records) {
-            Optional<Integer> ageOptional = record.getDriverAge();
-            if (ageOptional.isPresent()) {
-                int age = ageOptional.get();
-                if (age > 0) {
-                    counts.merge(age, 1L, Long::sum);
-                } else {
-                    unknownCount++;
-                }
-            } else {
-                unknownCount++;
+            Optional<String> eidOptional = record.getEid();
+            if (eidOptional.isEmpty()) {
+                continue;
+            }
+            String eid = eidOptional.get();
+            Integer ageValue = record.getDriverAge().filter(age -> age > 0).orElse(null);
+            if (!ageByEid.containsKey(eid) || (ageByEid.get(eid) == null && ageValue != null)) {
+                ageByEid.put(eid, ageValue);
             }
         }
-        List<QuoteStatistics.CategoryCount> results = new ArrayList<>();
-        for (Map.Entry<Integer, Long> entry : counts.entrySet()) {
-            results.add(new QuoteStatistics.CategoryCount(String.valueOf(entry.getKey()), entry.getValue()));
+
+        if (ageByEid.isEmpty()) {
+            return List.of(new QuoteStatistics.CategoryCount("No Data", 0));
         }
-        if (unknownCount > 0) {
-            results.add(new QuoteStatistics.CategoryCount("Unknown", unknownCount));
+
+        Map<String, Long> counts = new HashMap<>();
+        for (Integer age : ageByEid.values()) {
+            String label = age != null ? String.valueOf(age) : "Unknown";
+            counts.merge(label, 1L, Long::sum);
         }
-        if (results.isEmpty()) {
-            results.add(new QuoteStatistics.CategoryCount("No Data", 0));
-        }
-        return results;
+
+        return counts.entrySet().stream()
+                .sorted(Comparator
+                        .comparingInt(entry -> ageOrderKey(entry.getKey()))
+                        .thenComparing(Map.Entry::getKey))
+                .map(entry -> new QuoteStatistics.CategoryCount(entry.getKey(), entry.getValue()))
+                .collect(Collectors.toList());
     }
 
     private static List<QuoteStatistics.ValueRangeStats> computeEstimatedValueRangeStats(List<QuoteRecord> records) {
