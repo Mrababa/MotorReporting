@@ -23,6 +23,7 @@ public class QuoteRecord {
     private final Integer manufactureYear;
     private final BigDecimal estimatedValue;
     private final String chassisNumber;
+    private final String eid;
     private final QuoteOutcome outcome;
     private final String bodyCategory;
     private final String overrideSpecification;
@@ -39,6 +40,7 @@ public class QuoteRecord {
                         BigDecimal estimatedValue,
                         String quoteNumber,
                         String chassisNumber,
+                        String eid,
                         QuoteOutcome outcome,
                         String bodyCategory,
                         String overrideSpecification,
@@ -54,6 +56,7 @@ public class QuoteRecord {
         this.estimatedValue = estimatedValue;
         this.quoteNumber = quoteNumber;
         this.chassisNumber = chassisNumber;
+        this.eid = eid;
         this.outcome = Objects.requireNonNull(outcome, "outcome");
         this.bodyCategory = bodyCategory;
         this.overrideSpecification = overrideSpecification;
@@ -91,9 +94,10 @@ public class QuoteRecord {
         Integer driverAge = parseInteger(getValueIgnoreCase(normalized, "Age"));
         String model = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ShoryModelEn"));
         String make = normalizeCategoricalValue(getValueIgnoreCase(normalized, "ShoryMakeEn"));
+        String eid = extractEid(normalized);
 
         return new QuoteRecord(normalized, insuranceType, status, insurancePurpose, errorText, manufactureYear, estimatedValue,
-                quoteNumber, chassisNumber, outcome, bodyCategory, overrideSpec, driverAge, model, make);
+                quoteNumber, chassisNumber, eid, outcome, bodyCategory, overrideSpec, driverAge, model, make);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
@@ -225,6 +229,49 @@ public class QuoteRecord {
         return null;
     }
 
+    private static String extractEid(Map<String, String> values) {
+        String[] possibleKeys = {
+                "EID",
+                "EIDNumber",
+                "EID No",
+                "EID#",
+                "EmiratesID",
+                "Emirates ID",
+                "EmiratesIDNumber",
+                "Emirates ID Number",
+                "Emirates ID No",
+                "EmiratesIDNo",
+                "NationalID",
+                "National ID",
+                "NationalIDNumber",
+                "CustomerEID",
+                "Customer EID"
+        };
+        for (String key : possibleKeys) {
+            String value = getValueIgnoreCase(values, key);
+            String normalized = normalizeEid(value);
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+
+        for (Map.Entry<String, String> entry : values.entrySet()) {
+            String header = entry.getKey();
+            if (header == null || header.isBlank()) {
+                continue;
+            }
+            if (!isLikelyEidHeader(normalizeHeaderKey(header))) {
+                continue;
+            }
+            String normalized = normalizeEid(entry.getValue());
+            if (normalized != null) {
+                return normalized;
+            }
+        }
+
+        return null;
+    }
+
     private static String normalizeChassisNumber(String value) {
         if (isNullLiteral(value)) {
             return null;
@@ -244,6 +291,58 @@ public class QuoteRecord {
             return null;
         }
         return cleaned.toString().toUpperCase(Locale.ROOT);
+    }
+
+    private static String normalizeEid(String value) {
+        if (isNullLiteral(value)) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        StringBuilder cleaned = new StringBuilder(trimmed.length());
+        for (int i = 0; i < trimmed.length(); i++) {
+            char ch = trimmed.charAt(i);
+            if (Character.isLetterOrDigit(ch)) {
+                cleaned.append(Character.toUpperCase(ch));
+            }
+        }
+        if (cleaned.length() == 0) {
+            return null;
+        }
+        return cleaned.toString();
+    }
+
+    private static boolean isLikelyEidHeader(String normalizedHeader) {
+        if (normalizedHeader == null || normalizedHeader.isEmpty()) {
+            return false;
+        }
+        String lower = normalizedHeader.toLowerCase(Locale.ROOT);
+        return lower.equals("eid")
+                || lower.endsWith("eid")
+                || lower.endsWith("eidnumber")
+                || lower.endsWith("eidno")
+                || lower.contains("emiratesid")
+                || lower.equals("nationalid")
+                || lower.endsWith("nationalid")
+                || lower.endsWith("nationalidnumber")
+                || lower.endsWith("nationalidno");
+    }
+
+    private static String normalizeHeaderKey(String header) {
+        if (header == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder(header.length());
+        for (int i = 0; i < header.length(); i++) {
+            char ch = header.charAt(i);
+            if (Character.isWhitespace(ch) || ch == '_' || ch == '-' || ch == '#') {
+                continue;
+            }
+            builder.append(Character.toLowerCase(ch));
+        }
+        return builder.toString();
     }
 
     private static Integer parseInteger(String value) {
@@ -306,6 +405,10 @@ public class QuoteRecord {
 
     public Optional<String> getChassisNumber() {
         return Optional.ofNullable(chassisNumber);
+    }
+
+    public Optional<String> getEid() {
+        return Optional.ofNullable(eid);
     }
 
     public boolean hasQuoteNumber() {

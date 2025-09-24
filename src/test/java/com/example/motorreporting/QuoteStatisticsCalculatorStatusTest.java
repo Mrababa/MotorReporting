@@ -185,4 +185,56 @@ class QuoteStatisticsCalculatorStatusTest {
         assertEquals(0, compToyota.getSuccessfulUniqueChassisCount());
         assertEquals(1, compToyota.getFailedUniqueChassisCount());
     }
+
+    @Test
+    void tplEidChassisSummaryDeduplicatesRequests() {
+        QuoteRecord firstRequest = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Third Party",
+                "Status", "Success",
+                "ChassisNumber", "ABC-123",
+                "EID", "784-1980-1234567-1"
+        ));
+
+        QuoteRecord duplicateFormatting = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Third Party",
+                "Status", "Failed",
+                "ErrorText", "declined",
+                "ChassisNumber", "ABC-123 ",
+                "EID", "784198012345671"
+        ));
+
+        QuoteRecord missingEid = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Third Party",
+                "Status", "Success",
+                "ChassisNumber", "NO-EID-1"
+        ));
+
+        QuoteRecord differentCombination = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Third Party",
+                "Status", "Failed",
+                "ErrorText", "declined",
+                "ChassisNumber", "XYZ-999",
+                "EID", "784198012345672"
+        ));
+
+        QuoteRecord comprehensiveRecord = QuoteRecord.fromValues(Map.of(
+                "InsuranceType", "Comprehensive",
+                "Status", "Success",
+                "ChassisNumber", "COMP-DEDUP",
+                "EID", "784198012345673"
+        ));
+
+        QuoteStatistics statistics = QuoteStatisticsCalculator.calculate(List.of(
+                firstRequest,
+                duplicateFormatting,
+                missingEid,
+                differentCombination,
+                comprehensiveRecord
+        ));
+
+        QuoteStatistics.EidChassisSummary summary = statistics.getTplEidChassisSummary();
+        assertEquals(3, summary.getTotalRequests());
+        assertEquals(2, summary.getUniqueRequests());
+        assertEquals(1, summary.getDuplicateRequests());
+    }
 }

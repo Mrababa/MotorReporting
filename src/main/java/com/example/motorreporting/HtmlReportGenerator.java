@@ -79,6 +79,10 @@ public class HtmlReportGenerator {
         long uniqueChassisFail = statistics.getUniqueChassisFailCount();
         long tplUniqueChassisSuccess = statistics.getTplUniqueChassisSuccessCount();
         long tplUniqueChassisFail = statistics.getTplUniqueChassisFailCount();
+        QuoteStatistics.EidChassisSummary tplEidChassisSummary = statistics.getTplEidChassisSummary();
+        long tplEidChassisTotal = tplEidChassisSummary.getTotalRequests();
+        long tplEidChassisUnique = tplEidChassisSummary.getUniqueRequests();
+        long tplEidChassisDuplicates = tplEidChassisSummary.getDuplicateRequests();
         long compUniqueChassisSuccess = statistics.getComprehensiveUniqueChassisSuccessCount();
         long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
         String headerText = buildHeaderText(records);
@@ -359,6 +363,20 @@ public class HtmlReportGenerator {
         appendSummaryCard(html, "TPL Failed", tplStats.getFailCount(), "#dc2626");
         html.append("      </div>\n");
         html.append("    </div>\n");
+        html.append("    <div class=\"summary-section\">\n");
+        html.append("      <h2 class=\"section-title\">Unique Case Analysis</h2>\n");
+        html.append("      <div class=\"summary-grid\">\n");
+        appendSummaryCard(html, "Requests with EID + Chassis", tplEidChassisTotal, "#2563eb");
+        appendSummaryCard(html, "Unique Requests", tplEidChassisUnique, "#16a34a");
+        appendSummaryCard(html, "Duplicate Requests", tplEidChassisDuplicates, "#dc2626");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card\">\n");
+        html.append("        <h2>Total vs Unique Requests (EID + Chassis)</h2>\n");
+        html.append("        <canvas id=\"tplEidChassisDedupChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
         html.append("      <h2 class=\"section-title\">TPL Requests by Body Category</h2>\n");
         html.append("      <div class=\"chart-grid\">\n");
@@ -401,6 +419,7 @@ public class HtmlReportGenerator {
         html.append("        <canvas id=\"tplManufactureYearChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
+        appendEidChassisSummaryTable(html, "EID + Chassis Deduplication Details", tplEidChassisSummary);
         appendModelChassisTable(html, "Top 10 Rejected Models (Unique Chassis)",
                 statistics.getTplTopRejectedModelsByUniqueChassis());
         appendErrorTable(html, "TPL Error Counts", statistics.getTplErrorCounts());
@@ -854,6 +873,49 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
+    private void appendEidChassisSummaryTable(StringBuilder html,
+                                              String heading,
+                                              QuoteStatistics.EidChassisSummary summary) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        if (summary.getTotalRequests() == 0) {
+            html.append("      <p class=\"empty-state\">No matching requests with both EID and chassis recorded.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">Metric</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Count</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        html.append("          <tr>\n");
+        html.append("            <td>Requests with EID + Chassis</td>\n");
+        html.append("            <td class=\"numeric\">")
+                .append(escapeHtml(formatInteger(summary.getTotalRequests())))
+                .append("</td>\n");
+        html.append("          </tr>\n");
+        html.append("          <tr>\n");
+        html.append("            <td>Unique Requests</td>\n");
+        html.append("            <td class=\"numeric\">")
+                .append(escapeHtml(formatInteger(summary.getUniqueRequests())))
+                .append("</td>\n");
+        html.append("          </tr>\n");
+        html.append("          <tr>\n");
+        html.append("            <td>Duplicate Requests</td>\n");
+        html.append("            <td class=\"numeric\">")
+                .append(escapeHtml(formatInteger(summary.getDuplicateRequests())))
+                .append("</td>\n");
+        html.append("          </tr>\n");
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
     private void appendErrorTable(StringBuilder html, String heading, Map<String, Long> errorCounts) {
         html.append("    <div class=\"table-card\">\n");
         html.append("      <h3>")
@@ -894,6 +956,9 @@ public class HtmlReportGenerator {
         QuoteGroupStats compStats = statistics.getComprehensiveStats();
         long tplUniqueChassisSuccess = statistics.getTplUniqueChassisSuccessCount();
         long tplUniqueChassisFail = statistics.getTplUniqueChassisFailCount();
+        QuoteStatistics.EidChassisSummary tplEidChassisSummary = statistics.getTplEidChassisSummary();
+        long tplEidChassisTotal = tplEidChassisSummary.getTotalRequests();
+        long tplEidChassisUnique = tplEidChassisSummary.getUniqueRequests();
         long compUniqueChassisSuccess = statistics.getComprehensiveUniqueChassisSuccessCount();
         long compUniqueChassisFail = statistics.getComprehensiveUniqueChassisFailCount();
 
@@ -1134,6 +1199,15 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
+        script.append("  const tplEidChassisDedupData = {\n");
+        script.append("    labels: ['Total Requests', 'Unique Requests'],\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Requests',\n");
+        script.append("      data: [").append(tplEidChassisTotal).append(',').append(tplEidChassisUnique).append("],\n");
+        script.append("      backgroundColor: ['#2563eb', '#16a34a'],\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
         script.append("  const compUniqueChassisData = {\n");
         script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
@@ -1325,6 +1399,7 @@ public class HtmlReportGenerator {
         script.append("  new Chart(document.getElementById('tplOutcomesChart'), { type: 'bar', data: tplData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compOutcomesChart'), { type: 'bar', data: compData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplUniqueChassisChart'), { type: 'bar', data: tplUniqueChassisData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('tplEidChassisDedupChart'), { type: 'bar', data: tplEidChassisDedupData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compUniqueChassisChart'), { type: 'bar', data: compUniqueChassisData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodySuccessChart'), { type: 'bar', data: tplBodySuccessData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodyFailureChart'), { type: 'bar', data: tplBodyFailureData, options: sharedOptions });\n");
