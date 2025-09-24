@@ -17,10 +17,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Locale;
+import java.util.Set;
 
 /**
  * Loads quote data from either Excel or CSV files.
@@ -29,6 +31,8 @@ public final class QuoteDataLoader {
 
     private QuoteDataLoader() {
     }
+
+    private static final Set<String> LOGIC_COLUMN_KEYS = buildLogicColumnKeys();
 
     public static List<QuoteRecord> load(Path filePath) throws IOException {
         Objects.requireNonNull(filePath, "filePath");
@@ -47,31 +51,76 @@ public final class QuoteDataLoader {
         try (InputStream inputStream = Files.newInputStream(filePath);
              Workbook workbook = WorkbookFactory.create(inputStream)) {
             DataFormatter formatter = new DataFormatter();
-            Sheet sheet = workbook.getSheetAt(0);
-            if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) {
+            SheetSelection selection = findSheetSelection(workbook, formatter);
+            if (selection == null) {
                 return records;
             }
 
-            Row headerRow = sheet.getRow(sheet.getFirstRowNum());
-            if (headerRow == null) {
-                return records;
-            }
-            Map<Integer, String> headerIndex = extractHeaders(headerRow, formatter);
-
-            int firstRow = sheet.getFirstRowNum() + 1;
-            int lastRow = sheet.getLastRowNum();
+            int firstRow = selection.headerRowIndex + 1;
+            int lastRow = selection.sheet.getLastRowNum();
             for (int rowIndex = firstRow; rowIndex <= lastRow; rowIndex++) {
-                Row row = sheet.getRow(rowIndex);
+                Row row = selection.sheet.getRow(rowIndex);
                 if (row == null || isRowEmpty(row, formatter)) {
                     continue;
                 }
-                Map<String, String> values = extractRowValues(row, headerIndex, formatter);
+                Map<String, String> values = extractRowValues(row, selection.headerIndex, formatter);
                 records.add(QuoteRecord.fromValues(values));
             }
         } catch (Exception ex) {
             throw new IOException("Unable to read Excel file: " + filePath, ex);
         }
         return records;
+    }
+
+    private static SheetSelection findSheetSelection(Workbook workbook, DataFormatter formatter) {
+        SheetSelection bestSelection = null;
+        int sheetCount = workbook.getNumberOfSheets();
+        for (int i = 0; i < sheetCount; i++) {
+            Sheet sheet = workbook.getSheetAt(i);
+            if (sheet == null || sheet.getPhysicalNumberOfRows() == 0) {
+                continue;
+            }
+            SheetSelection candidate = analyzeSheet(sheet, formatter);
+            if (candidate == null) {
+                continue;
+            }
+            if (bestSelection == null || candidate.logicColumnCount > bestSelection.logicColumnCount) {
+                bestSelection = candidate;
+            }
+        }
+        return bestSelection;
+    }
+
+    private static SheetSelection analyzeSheet(Sheet sheet, DataFormatter formatter) {
+        SheetSelection bestCandidate = null;
+        int firstRowNum = sheet.getFirstRowNum();
+        int lastRowNum = sheet.getLastRowNum();
+        for (int rowIndex = firstRowNum; rowIndex <= lastRowNum; rowIndex++) {
+            Row row = sheet.getRow(rowIndex);
+            if (row == null || isRowEmpty(row, formatter)) {
+                continue;
+            }
+            Map<Integer, String> headerIndex = extractHeaders(row, formatter);
+            if (headerIndex.isEmpty()) {
+                continue;
+            }
+            int logicColumnCount = countLogicColumns(headerIndex);
+            SheetSelection candidate = new SheetSelection(sheet, headerIndex, rowIndex, logicColumnCount);
+            if (bestCandidate == null || candidate.logicColumnCount > bestCandidate.logicColumnCount) {
+                bestCandidate = candidate;
+            }
+        }
+        return bestCandidate;
+    }
+
+    private static int countLogicColumns(Map<Integer, String> headerIndex) {
+        int count = 0;
+        for (String header : headerIndex.values()) {
+            if (LOGIC_COLUMN_KEYS.contains(normalizeHeaderKey(header))) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static Map<Integer, String> extractHeaders(Row headerRow, DataFormatter formatter) {
@@ -105,6 +154,73 @@ public final class QuoteDataLoader {
             values.put(headerName, value == null ? "" : value.trim());
         });
         return values;
+    }
+
+    private static Set<String> buildLogicColumnKeys() {
+        Set<String> keys = new HashSet<>();
+        String[] columns = {
+                "QuoteRequestedOn",
+                "Status",
+                "ReferenceNumber",
+                "InsurancePurpose",
+                "ICName",
+                "ShoryMakeEn",
+                "ShoryModelEn",
+                "OverrideIsGccSpec",
+                "Age",
+                "LicenseIssueDate",
+                "BodyCategory",
+                "ChassisNumber",
+                "ChassisNo",
+                "Chassis No",
+                "VehicleIdentificationNumber",
+                "VIN",
+                "InsuranceType",
+                "ManufactureYear",
+                "RegistrationDate",
+                "QuotationNo",
+                "QuotationNumber",
+                "QuoteNumber",
+                "QuoteNo",
+                "Quote #",
+                "Quotation #",
+                "EstimatedValue",
+                "InsuranceExpiryDate",
+                "ErrorText"
+        };
+        for (String column : columns) {
+            keys.add(normalizeHeaderKey(column));
+        }
+        return keys;
+    }
+
+    private static String normalizeHeaderKey(String header) {
+        if (header == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder(header.length());
+        for (int i = 0; i < header.length(); i++) {
+            char ch = header.charAt(i);
+            if (Character.isWhitespace(ch) || ch == '_') {
+                continue;
+            }
+            builder.append(Character.toLowerCase(ch));
+        }
+        return builder.toString();
+    }
+
+    private static final class SheetSelection {
+        private final Sheet sheet;
+        private final Map<Integer, String> headerIndex;
+        private final int headerRowIndex;
+        private final int logicColumnCount;
+
+        private SheetSelection(Sheet sheet, Map<Integer, String> headerIndex, int headerRowIndex, int logicColumnCount) {
+            this.sheet = sheet;
+            this.headerIndex = headerIndex;
+            this.headerRowIndex = headerRowIndex;
+            this.logicColumnCount = logicColumnCount;
+        }
     }
 
     private static List<QuoteRecord> loadFromCsv(Path filePath) throws IOException {
