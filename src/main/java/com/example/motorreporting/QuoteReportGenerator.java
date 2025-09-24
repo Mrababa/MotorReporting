@@ -8,6 +8,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * Application entry point.
@@ -117,8 +118,13 @@ public final class QuoteReportGenerator {
                     + sourceDirectory.toAbsolutePath());
         }
         if (candidates.size() > 1) {
+            String availableFiles = candidates.stream()
+                    .map(path -> path.getFileName().toString())
+                    .sorted()
+                    .collect(Collectors.joining(", "));
             throw new IllegalArgumentException("Multiple data files found in source data directory: "
-                    + sourceDirectory.toAbsolutePath() + ". Please specify which file to use.");
+                    + sourceDirectory.toAbsolutePath() + " (" + availableFiles
+                    + "). Please specify which file to use.");
         }
         return candidates.get(0);
     }
