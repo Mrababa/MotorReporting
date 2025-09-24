@@ -12,6 +12,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
@@ -35,10 +36,12 @@ import java.util.Set;
  */
 public final class QuoteDataLoader {
 
+    private static final Set<String> LOGIC_COLUMN_KEYS = buildLogicColumnKeys();
+    private static final char DEFAULT_CSV_SEPARATOR = ',';
+    private static final char[] CSV_SEPARATOR_CANDIDATES = {',', ';', '\t', '|'};
+
     private QuoteDataLoader() {
     }
-
-    private static final Set<String> LOGIC_COLUMN_KEYS = buildLogicColumnKeys();
 
     public static List<QuoteRecord> load(Path filePath) throws IOException {
         Objects.requireNonNull(filePath, "filePath");
@@ -251,9 +254,10 @@ public final class QuoteDataLoader {
     }
 
     private static List<QuoteRecord> parseCsv(Path filePath, Charset charset) throws IOException {
+        char separator = detectCsvSeparator(filePath, charset);
         try (Reader reader = Files.newBufferedReader(filePath, charset);
              CSVReader csvReader = new CSVReaderBuilder(reader)
-                     .withCSVParser(new CSVParserBuilder().withSeparator(',').build())
+                     .withCSVParser(new CSVParserBuilder().withSeparator(separator).build())
                      .build()) {
             return readCsvRecords(csvReader);
         } catch (CharacterCodingException ex) {
@@ -261,6 +265,64 @@ public final class QuoteDataLoader {
         } catch (Exception ex) {
             throw new IOException("Unable to read CSV file: " + filePath, ex);
         }
+    }
+
+    private static char detectCsvSeparator(Path filePath, Charset charset) throws IOException {
+        try (BufferedReader reader = Files.newBufferedReader(filePath, charset)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isEmpty()) {
+                    continue;
+                }
+                String trimmed = stripBom(line).trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                if (trimmed.regionMatches(true, 0, "sep=", 0, 4)) {
+                    if (trimmed.length() > 4) {
+                        return trimmed.charAt(4);
+                    }
+                    continue;
+                }
+                return guessSeparatorFromLine(line);
+            }
+        }
+        return DEFAULT_CSV_SEPARATOR;
+    }
+
+    private static char guessSeparatorFromLine(String line) {
+        String candidate = stripBom(line);
+        int bestScore = -1;
+        char bestSeparator = DEFAULT_CSV_SEPARATOR;
+        for (char separator : CSV_SEPARATOR_CANDIDATES) {
+            int score = countSeparatorOccurrences(candidate, separator);
+            if (score > bestScore) {
+                bestScore = score;
+                bestSeparator = separator;
+            }
+        }
+        if (bestScore <= 0) {
+            return DEFAULT_CSV_SEPARATOR;
+        }
+        return bestSeparator;
+    }
+
+    private static int countSeparatorOccurrences(String line, char separator) {
+        int count = 0;
+        boolean inQuotes = false;
+        for (int i = 0; i < line.length(); i++) {
+            char ch = line.charAt(i);
+            if (ch == '"') {
+                if (inQuotes && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    i++;
+                    continue;
+                }
+                inQuotes = !inQuotes;
+            } else if (!inQuotes && ch == separator) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static List<QuoteRecord> readCsvRecords(CSVReader csvReader) throws IOException {
