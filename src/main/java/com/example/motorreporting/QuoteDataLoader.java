@@ -235,25 +235,34 @@ public final class QuoteDataLoader {
     private static List<QuoteRecord> loadFromCsv(Path filePath) throws IOException {
         List<Charset> charsets = buildCsvCharsetCandidates(filePath);
         IOException decodingFailure = null;
+        CsvParseResult bestResult = null;
         for (Charset charset : charsets) {
             try {
-                return parseCsv(filePath, charset);
+                CsvParseResult result = parseCsv(filePath, charset);
+                if (isBetterCsvResult(result, bestResult)) {
+                    bestResult = result;
+                }
             } catch (IOException ex) {
                 if (ex instanceof CharacterCodingException) {
-                    decodingFailure = new IOException(
-                            "Failed to decode CSV using charset " + charset.displayName(Locale.ROOT), ex);
+                    if (decodingFailure == null) {
+                        decodingFailure = new IOException(
+                                "Failed to decode CSV using charset " + charset.displayName(Locale.ROOT), ex);
+                    }
                     continue;
                 }
                 throw ex;
             }
         }
+        if (bestResult != null) {
+            return bestResult.getRecords();
+        }
         if (decodingFailure != null) {
             throw new IOException("Unable to read CSV file: " + filePath, decodingFailure);
         }
-        return parseCsv(filePath, StandardCharsets.UTF_8);
+        return parseCsv(filePath, StandardCharsets.UTF_8).getRecords();
     }
 
-    private static List<QuoteRecord> parseCsv(Path filePath, Charset charset) throws IOException {
+    private static CsvParseResult parseCsv(Path filePath, Charset charset) throws IOException {
         char separator = detectCsvSeparator(filePath, charset);
         try (Reader reader = Files.newBufferedReader(filePath, charset);
              CSVReader csvReader = new CSVReaderBuilder(reader)
@@ -325,14 +334,14 @@ public final class QuoteDataLoader {
         return count;
     }
 
-    private static List<QuoteRecord> readCsvRecords(CSVReader csvReader) throws IOException {
+    private static CsvParseResult readCsvRecords(CSVReader csvReader) throws IOException {
         List<QuoteRecord> records = new ArrayList<>();
+        Map<Integer, String> headerIndex = new HashMap<>();
         try {
             String[] headers = readHeaderRow(csvReader);
             if (headers == null) {
-                return records;
+                return new CsvParseResult(records, 0, false);
             }
-            Map<Integer, String> headerIndex = new HashMap<>();
             for (int i = 0; i < headers.length; i++) {
                 String header = headers[i];
                 if (header != null) {
@@ -342,6 +351,8 @@ public final class QuoteDataLoader {
                     headerIndex.put(i, header);
                 }
             }
+
+            int logicColumnCount = countLogicColumns(headerIndex);
 
             String[] row;
             while ((row = csvReader.readNext()) != null) {
@@ -361,10 +372,10 @@ public final class QuoteDataLoader {
                 }
                 records.add(QuoteRecord.fromValues(values));
             }
+            return new CsvParseResult(records, logicColumnCount, !headerIndex.isEmpty());
         } catch (CsvValidationException ex) {
             throw new IOException("Unable to parse CSV file", ex);
         }
-        return records;
     }
 
     private static String[] readHeaderRow(CSVReader csvReader) throws IOException, CsvValidationException {
@@ -449,5 +460,52 @@ public final class QuoteDataLoader {
             }
         }
         return true;
+    }
+
+    private static boolean isBetterCsvResult(CsvParseResult candidate, CsvParseResult current) {
+        if (candidate == null) {
+            return false;
+        }
+        if (current == null) {
+            return true;
+        }
+        if (candidate.hasHeader() != current.hasHeader()) {
+            return candidate.hasHeader();
+        }
+        if (candidate.getLogicColumnCount() != current.getLogicColumnCount()) {
+            return candidate.getLogicColumnCount() > current.getLogicColumnCount();
+        }
+        if (candidate.hasRecords() != current.hasRecords()) {
+            return candidate.hasRecords();
+        }
+        return candidate.getRecords().size() > current.getRecords().size();
+    }
+
+    private static final class CsvParseResult {
+        private final List<QuoteRecord> records;
+        private final int logicColumnCount;
+        private final boolean headerFound;
+
+        private CsvParseResult(List<QuoteRecord> records, int logicColumnCount, boolean headerFound) {
+            this.records = records;
+            this.logicColumnCount = logicColumnCount;
+            this.headerFound = headerFound;
+        }
+
+        private List<QuoteRecord> getRecords() {
+            return records;
+        }
+
+        private int getLogicColumnCount() {
+            return logicColumnCount;
+        }
+
+        private boolean hasHeader() {
+            return headerFound;
+        }
+
+        private boolean hasRecords() {
+            return !records.isEmpty();
+        }
     }
 }
