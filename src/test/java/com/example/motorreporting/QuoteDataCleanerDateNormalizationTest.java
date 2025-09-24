@@ -53,4 +53,35 @@ class QuoteDataCleanerDateNormalizationTest {
             assertEquals("Charlie", row[indexByHeader.get("Name")]);
         }
     }
+
+    @Test
+    void retainsOriginalValueWhenDateCannotBeParsed() throws IOException, CsvValidationException {
+        Map<String, String> values = new HashMap<>();
+        values.put("InsuranceExpiryDate", "End of month");
+        values.put("RegistrationDate", "Null");
+        values.put("Status", "");
+        values.put("QuotationNo", "");
+        values.put("ErrorText", "Null");
+        values.put("InsuranceType", "TPL");
+
+        QuoteRecord record = QuoteRecord.fromValues(values);
+
+        Path cleanedFile = QuoteDataCleaner.writeCleanFile(tempDir, List.of(record));
+
+        try (Reader reader = Files.newBufferedReader(cleanedFile, StandardCharsets.UTF_8);
+             CSVReader csvReader = new CSVReader(reader)) {
+            String[] header = csvReader.readNext();
+            String[] row = csvReader.readNext();
+            assertNotNull(header);
+            assertNotNull(row);
+
+            Map<String, Integer> indexByHeader = new HashMap<>();
+            for (int i = 0; i < header.length; i++) {
+                indexByHeader.put(header[i], i);
+            }
+
+            assertEquals("End of month", row[indexByHeader.get("InsuranceExpiryDate")]);
+            assertEquals("", row[indexByHeader.get("RegistrationDate")]);
+        }
+    }
 }

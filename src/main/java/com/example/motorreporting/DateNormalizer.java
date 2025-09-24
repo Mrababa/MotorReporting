@@ -45,6 +45,9 @@ final class DateNormalizer {
         if (trimmed.isEmpty()) {
             return "";
         }
+        if ("null".equalsIgnoreCase(trimmed)) {
+            return "";
+        }
         if (TIME_ONLY_PATTERN.matcher(trimmed).matches()) {
             return "";
         }
@@ -64,7 +67,11 @@ final class DateNormalizer {
             return OUTPUT_FORMAT.format(dateTime);
         }
 
-        return "";
+        if (EXCEL_SERIAL_PATTERN.matcher(trimmed).matches()) {
+            return "";
+        }
+
+        return trimmed;
     }
 
     private static LocalDateTime parseDateTime(String value) {
