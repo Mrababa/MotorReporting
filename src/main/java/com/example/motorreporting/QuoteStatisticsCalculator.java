@@ -44,6 +44,7 @@ public final class QuoteStatisticsCalculator {
         UniqueChassisSummary uniqueChassisSummary = computeUniqueChassisSummary(records);
         UniqueChassisSummary tplUniqueChassisSummary = computeUniqueChassisSummary(tplRecords);
         UniqueChassisSummary compUniqueChassisSummary = computeUniqueChassisSummary(compRecords);
+        QuoteStatistics.EidChassisSummary tplEidChassisSummary = computeEidChassisSummary(tplRecords);
         Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyCategoryOutcomes =
                 computeOutcomeBreakdown(tplRecords, QuoteRecord::getBodyCategoryLabel);
         Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecificationOutcomes =
@@ -84,6 +85,7 @@ public final class QuoteStatisticsCalculator {
                 uniqueChassisSummary.getFailureCount(),
                 tplUniqueChassisSummary.getSuccessCount(),
                 tplUniqueChassisSummary.getFailureCount(),
+                tplEidChassisSummary,
                 compUniqueChassisSummary.getSuccessCount(),
                 compUniqueChassisSummary.getFailureCount(),
                 tplBodyCategoryOutcomes,
@@ -105,6 +107,25 @@ public final class QuoteStatisticsCalculator {
                 uniqueChassisByBodyType,
                 manufactureYearTrend,
                 customerAgeTrend);
+    }
+
+    private static QuoteStatistics.EidChassisSummary computeEidChassisSummary(List<QuoteRecord> records) {
+        long total = 0;
+        Set<String> uniqueKeys = new LinkedHashSet<>();
+
+        for (QuoteRecord record : records) {
+            Optional<String> eid = record.getEid();
+            Optional<String> chassis = record.getChassisNumber();
+            if (eid.isEmpty() || chassis.isEmpty()) {
+                continue;
+            }
+            total++;
+            uniqueKeys.add(eid.get() + "::" + chassis.get());
+        }
+
+        long unique = uniqueKeys.size();
+        long duplicate = Math.max(0, total - unique);
+        return new QuoteStatistics.EidChassisSummary(total, unique, duplicate);
     }
 
     private static QuoteGroupStats buildStats(GroupType groupType, List<QuoteRecord> records) {

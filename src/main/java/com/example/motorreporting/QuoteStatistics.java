@@ -22,6 +22,7 @@ public class QuoteStatistics {
     private final long uniqueChassisFailCount;
     private final long tplUniqueChassisSuccessCount;
     private final long tplUniqueChassisFailCount;
+    private final EidChassisSummary tplEidChassisSummary;
     private final long comprehensiveUniqueChassisSuccessCount;
     private final long comprehensiveUniqueChassisFailCount;
     private final Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes;
@@ -51,6 +52,7 @@ public class QuoteStatistics {
                            long uniqueChassisFailCount,
                            long tplUniqueChassisSuccessCount,
                            long tplUniqueChassisFailCount,
+                           EidChassisSummary tplEidChassisSummary,
                            long comprehensiveUniqueChassisSuccessCount,
                            long comprehensiveUniqueChassisFailCount,
                            Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes,
@@ -79,6 +81,7 @@ public class QuoteStatistics {
         this.uniqueChassisFailCount = uniqueChassisFailCount;
         this.tplUniqueChassisSuccessCount = tplUniqueChassisSuccessCount;
         this.tplUniqueChassisFailCount = tplUniqueChassisFailCount;
+        this.tplEidChassisSummary = Objects.requireNonNull(tplEidChassisSummary, "tplEidChassisSummary");
         this.comprehensiveUniqueChassisSuccessCount = comprehensiveUniqueChassisSuccessCount;
         this.comprehensiveUniqueChassisFailCount = comprehensiveUniqueChassisFailCount;
         this.tplBodyCategoryOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplBodyCategoryOutcomes));
@@ -141,6 +144,22 @@ public class QuoteStatistics {
 
     public long getTplUniqueChassisFailCount() {
         return tplUniqueChassisFailCount;
+    }
+
+    public EidChassisSummary getTplEidChassisSummary() {
+        return tplEidChassisSummary;
+    }
+
+    public long getTplEidChassisTotalRequests() {
+        return tplEidChassisSummary.getTotalRequests();
+    }
+
+    public long getTplEidChassisUniqueRequests() {
+        return tplEidChassisSummary.getUniqueRequests();
+    }
+
+    public long getTplEidChassisDuplicateRequests() {
+        return tplEidChassisSummary.getDuplicateRequests();
     }
 
     public long getComprehensiveUniqueChassisSuccessCount() {
@@ -287,6 +306,30 @@ public class QuoteStatistics {
             return Integer.parseInt(label);
         } catch (NumberFormatException ex) {
             return Integer.MAX_VALUE;
+        }
+    }
+
+    public static final class EidChassisSummary {
+        private final long totalRequests;
+        private final long uniqueRequests;
+        private final long duplicateRequests;
+
+        public EidChassisSummary(long totalRequests, long uniqueRequests, long duplicateRequests) {
+            this.totalRequests = totalRequests;
+            this.uniqueRequests = uniqueRequests;
+            this.duplicateRequests = duplicateRequests;
+        }
+
+        public long getTotalRequests() {
+            return totalRequests;
+        }
+
+        public long getUniqueRequests() {
+            return uniqueRequests;
+        }
+
+        public long getDuplicateRequests() {
+            return duplicateRequests;
         }
     }
 
