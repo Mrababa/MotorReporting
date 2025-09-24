@@ -8,11 +8,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * Writes a cleaned representation of the input dataset.
@@ -75,17 +74,35 @@ public final class QuoteDataCleaner {
     }
 
     private static List<String> determineHeaders(List<QuoteRecord> records) {
-        Set<String> headers = new LinkedHashSet<>(DEFAULT_COLUMN_ORDER);
-        for (QuoteRecord record : records) {
-            headers.addAll(record.getRawValues().keySet());
+        Map<String, String> headersByNormalizedKey = new LinkedHashMap<>();
+        for (String defaultHeader : DEFAULT_COLUMN_ORDER) {
+            if (defaultHeader == null || defaultHeader.isEmpty()) {
+                continue;
+            }
+            headersByNormalizedKey.putIfAbsent(normalizeHeaderKey(defaultHeader), defaultHeader);
         }
-        return new ArrayList<>(headers);
+        for (QuoteRecord record : records) {
+            for (String header : record.getRawValues().keySet()) {
+                if (header == null || header.isEmpty()) {
+                    continue;
+                }
+                headersByNormalizedKey.putIfAbsent(normalizeHeaderKey(header), header);
+            }
+        }
+        return new ArrayList<>(headersByNormalizedKey.values());
     }
 
     private static String findValue(Map<String, String> values, String header) {
+        if (header == null || header.isEmpty()) {
+            return "";
+        }
+        String normalizedHeader = normalizeHeaderKey(header);
         for (Map.Entry<String, String> entry : values.entrySet()) {
             String key = entry.getKey();
-            if (key != null && key.equalsIgnoreCase(header)) {
+            if (key == null || key.isEmpty()) {
+                continue;
+            }
+            if (normalizeHeaderKey(key).equals(normalizedHeader)) {
                 String value = entry.getValue();
                 if (DateNormalizer.isDateColumn(header)) {
                     return DateNormalizer.normalize(value);
@@ -94,5 +111,20 @@ public final class QuoteDataCleaner {
             }
         }
         return "";
+    }
+
+    private static String normalizeHeaderKey(String header) {
+        if (header == null) {
+            return "";
+        }
+        StringBuilder builder = new StringBuilder(header.length());
+        for (int i = 0; i < header.length(); i++) {
+            char ch = header.charAt(i);
+            if (Character.isWhitespace(ch) || ch == '_') {
+                continue;
+            }
+            builder.append(Character.toLowerCase(ch));
+        }
+        return builder.toString();
     }
 }
