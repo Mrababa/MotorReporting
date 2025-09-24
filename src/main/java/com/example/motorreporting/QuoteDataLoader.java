@@ -10,14 +10,19 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Reader;
+import java.nio.charset.Charset;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -224,44 +229,123 @@ public final class QuoteDataLoader {
     }
 
     private static List<QuoteRecord> loadFromCsv(Path filePath) throws IOException {
-        List<QuoteRecord> records = new ArrayList<>();
-        try (Reader reader = Files.newBufferedReader(filePath);
+        List<Charset> charsets = buildCsvCharsetCandidates(filePath);
+        IOException decodingFailure = null;
+        for (Charset charset : charsets) {
+            try {
+                return parseCsv(filePath, charset);
+            } catch (IOException ex) {
+                if (ex instanceof CharacterCodingException) {
+                    decodingFailure = new IOException(
+                            "Failed to decode CSV using charset " + charset.displayName(Locale.ROOT), ex);
+                    continue;
+                }
+                throw ex;
+            }
+        }
+        if (decodingFailure != null) {
+            throw new IOException("Unable to read CSV file: " + filePath, decodingFailure);
+        }
+        return parseCsv(filePath, StandardCharsets.UTF_8);
+    }
+
+    private static List<QuoteRecord> parseCsv(Path filePath, Charset charset) throws IOException {
+        try (Reader reader = Files.newBufferedReader(filePath, charset);
              CSVReader csvReader = new CSVReaderBuilder(reader)
                      .withCSVParser(new CSVParserBuilder().withSeparator(',').build())
                      .build()) {
-            String[] headers = csvReader.readNext();
-            if (headers == null) {
-                return records;
-            }
-            Map<Integer, String> headerIndex = new HashMap<>();
-            for (int i = 0; i < headers.length; i++) {
-                if (headers[i] != null && !headers[i].trim().isEmpty()) {
-                    String header = headers[i].trim();
-                    headerIndex.put(i, header);
-                }
-            }
-
-            String[] row;
-            while ((row = csvReader.readNext()) != null) {
-                if (isRowEmpty(row)) {
-                    continue;
-                }
-                Map<String, String> values = new HashMap<>();
-                for (Map.Entry<Integer, String> entry : headerIndex.entrySet()) {
-                    int index = entry.getKey();
-                    String header = entry.getValue();
-                    String value = index < row.length && row[index] != null ? row[index].trim() : "";
-                    if (DateNormalizer.isDateColumn(header)) {
-                        value = DateNormalizer.normalize(value);
-                    }
-                    values.put(header, value);
-                }
-                records.add(QuoteRecord.fromValues(values));
-            }
+            return readCsvRecords(csvReader);
+        } catch (CharacterCodingException ex) {
+            throw ex;
         } catch (Exception ex) {
             throw new IOException("Unable to read CSV file: " + filePath, ex);
         }
+    }
+
+    private static List<QuoteRecord> readCsvRecords(CSVReader csvReader) throws IOException {
+        List<QuoteRecord> records = new ArrayList<>();
+        String[] headers = csvReader.readNext();
+        if (headers == null) {
+            return records;
+        }
+        Map<Integer, String> headerIndex = new HashMap<>();
+        for (int i = 0; i < headers.length; i++) {
+            String header = headers[i];
+            if (header != null) {
+                header = stripBom(header).trim();
+            }
+            if (header != null && !header.isEmpty()) {
+                headerIndex.put(i, header);
+            }
+        }
+
+        String[] row;
+        while ((row = csvReader.readNext()) != null) {
+            if (isRowEmpty(row)) {
+                continue;
+            }
+            Map<String, String> values = new HashMap<>();
+            for (Map.Entry<Integer, String> entry : headerIndex.entrySet()) {
+                int index = entry.getKey();
+                String header = entry.getValue();
+                String rawValue = index < row.length ? row[index] : null;
+                String value = rawValue == null ? "" : stripBom(rawValue).trim();
+                if (DateNormalizer.isDateColumn(header)) {
+                    value = DateNormalizer.normalize(value);
+                }
+                values.put(header, value);
+            }
+            records.add(QuoteRecord.fromValues(values));
+        }
         return records;
+    }
+
+    private static List<Charset> buildCsvCharsetCandidates(Path filePath) throws IOException {
+        LinkedHashSet<Charset> candidates = new LinkedHashSet<>();
+        Charset bomCharset = detectBomCharset(filePath);
+        if (bomCharset != null) {
+            candidates.add(bomCharset);
+        }
+        candidates.add(StandardCharsets.UTF_8);
+        candidates.add(StandardCharsets.UTF_16);
+        candidates.add(StandardCharsets.UTF_16LE);
+        candidates.add(StandardCharsets.UTF_16BE);
+        candidates.add(StandardCharsets.ISO_8859_1);
+        return new ArrayList<>(candidates);
+    }
+
+    private static Charset detectBomCharset(Path filePath) throws IOException {
+        try (InputStream inputStream = new BufferedInputStream(Files.newInputStream(filePath))) {
+            int first = inputStream.read();
+            if (first == -1) {
+                return null;
+            }
+            int second = inputStream.read();
+            if (second == -1) {
+                return null;
+            }
+            if (first == 0xEF && second == 0xBB) {
+                int third = inputStream.read();
+                if (third == 0xBF) {
+                    return StandardCharsets.UTF_8;
+                }
+            } else if (first == 0xFE && second == 0xFF) {
+                return StandardCharsets.UTF_16;
+            } else if (first == 0xFF && second == 0xFE) {
+                return StandardCharsets.UTF_16;
+            }
+            return null;
+        }
+    }
+
+    private static String stripBom(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        if (value.charAt(0) == '\ufeff') {
+            return value.substring(1);
+        }
+        return value;
     }
 
     private static boolean isRowEmpty(String[] row) {
