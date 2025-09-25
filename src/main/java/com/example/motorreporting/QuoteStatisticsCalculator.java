@@ -32,10 +32,13 @@ public final class QuoteStatisticsCalculator {
     private static final int TOP_REJECTED_MODEL_LIMIT = 10;
     private static final int TOP_REJECTED_MAKE_MODEL_LIMIT = 20;
     private static final int TOP_REQUESTED_MAKE_MODEL_LIMIT = 20;
+    private static final int TOP_PREMIUM_MODEL_LIMIT = 10;
     private static final String SPEC_LABEL_GCC = "GCC";
     private static final String SPEC_LABEL_NON_GCC = "Non GCC";
     private static final String SPEC_LABEL_UNKNOWN = "Unknown";
     private static final String NO_DATA_LABEL = "No Data";
+    private static final String CHINESE_LABEL = "Chinese Quotes";
+    private static final String ELECTRIC_LABEL = "Electric Vehicles";
 
     private static String normalizeChassisNumber(String value) {
         if (value == null) {
@@ -133,6 +136,18 @@ public final class QuoteStatisticsCalculator {
                 computeSalesConversionByClassifier(compRecords, QuoteRecord::getChineseClassificationLabel);
         List<QuoteStatistics.SalesConversionStats> compSalesByFuelType =
                 computeSalesConversionByClassifier(compRecords, QuoteRecord::getElectricClassificationLabel);
+        List<QuoteStatistics.SalesPremiumBreakdown> compBodyPremiumBreakdowns =
+                computePremiumBreakdownByBodyType(compRecords);
+        BigDecimal comprehensiveTotalPremium = compBodyPremiumBreakdowns.stream()
+                .map(QuoteStatistics.SalesPremiumBreakdown::getTotalPremium)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long comprehensivePoliciesSold = compBodyPremiumBreakdowns.stream()
+                .mapToLong(QuoteStatistics.SalesPremiumBreakdown::getSoldPolicies)
+                .sum();
+        List<QuoteStatistics.MakeModelPremiumSummary> compTopModelsByPremium =
+                computeTopModelsByPremium(compRecords, TOP_PREMIUM_MODEL_LIMIT);
+        double compChineseSalesRatio = findConversionRatio(compSalesByChineseClassification, CHINESE_LABEL);
+        double compElectricSalesRatio = findConversionRatio(compSalesByFuelType, ELECTRIC_LABEL);
         Map<String, Long> tplErrorCounts = computeErrorCounts(tplRecords, false);
         Map<String, Long> compErrorCounts = computeErrorCounts(compRecords, true);
         List<QuoteStatistics.ModelChassisSummary> tplTopRejectedModels =
@@ -187,6 +202,12 @@ public final class QuoteStatisticsCalculator {
                 compSalesByAgeRange,
                 compSalesByChineseClassification,
                 compSalesByFuelType,
+                comprehensivePoliciesSold,
+                comprehensiveTotalPremium,
+                compBodyPremiumBreakdowns,
+                compTopModelsByPremium,
+                compChineseSalesRatio,
+                compElectricSalesRatio,
                 tplTopRejectedModels,
                 topRequestedMakeModels,
                 tplTopRequestedMakeModels,
@@ -819,6 +840,84 @@ public final class QuoteStatisticsCalculator {
         return results;
     }
 
+    private static List<QuoteStatistics.SalesPremiumBreakdown> computePremiumBreakdownByBodyType(List<QuoteRecord> records) {
+        LinkedHashMap<String, PremiumAccumulator> accumulatorByBody = new LinkedHashMap<>();
+        for (QuoteRecord record : records) {
+            if (!record.hasPolicyNumber()) {
+                continue;
+            }
+            String label = record.getBodyCategoryLabel();
+            PremiumAccumulator accumulator = accumulatorByBody.computeIfAbsent(label, ignored -> new PremiumAccumulator());
+            accumulator.incrementPolicies();
+            record.getPolicyPremium().ifPresent(accumulator::addPremium);
+        }
+
+        List<QuoteStatistics.SalesPremiumBreakdown> results = new ArrayList<>();
+        for (Map.Entry<String, PremiumAccumulator> entry : accumulatorByBody.entrySet()) {
+            PremiumAccumulator accumulator = entry.getValue();
+            if (accumulator.getSoldPolicies() > 0) {
+                results.add(accumulator.toBodyTypeBreakdown(entry.getKey()));
+            }
+        }
+
+        results.sort(Comparator
+                .comparingLong(QuoteStatistics.SalesPremiumBreakdown::getSoldPolicies).reversed()
+                .thenComparing(QuoteStatistics.SalesPremiumBreakdown::getTotalPremium, Comparator.reverseOrder())
+                .thenComparing(QuoteStatistics.SalesPremiumBreakdown::getLabel));
+        return results;
+    }
+
+    private static List<QuoteStatistics.MakeModelPremiumSummary> computeTopModelsByPremium(List<QuoteRecord> records,
+                                                                                          int limit) {
+        LinkedHashMap<MakeModelKey, PremiumAccumulator> accumulatorByModel = new LinkedHashMap<>();
+        for (QuoteRecord record : records) {
+            if (!record.hasPolicyNumber()) {
+                continue;
+            }
+            Optional<BigDecimal> premiumOptional = record.getPolicyPremium();
+            if (premiumOptional.isEmpty()) {
+                continue;
+            }
+            BigDecimal premium = premiumOptional.get();
+            MakeModelKey key = MakeModelKey.from(record);
+            PremiumAccumulator accumulator = accumulatorByModel.computeIfAbsent(key, ignored -> new PremiumAccumulator());
+            accumulator.incrementPolicies();
+            accumulator.addPremium(premium);
+        }
+
+        List<QuoteStatistics.MakeModelPremiumSummary> results = new ArrayList<>();
+        for (Map.Entry<MakeModelKey, PremiumAccumulator> entry : accumulatorByModel.entrySet()) {
+            PremiumAccumulator accumulator = entry.getValue();
+            if (accumulator.getTotalPremium().compareTo(BigDecimal.ZERO) > 0) {
+                results.add(accumulator.toMakeModelSummary(entry.getKey()));
+            }
+        }
+
+        results.sort(Comparator
+                .comparing(QuoteStatistics.MakeModelPremiumSummary::getTotalPremium, Comparator.reverseOrder())
+                .thenComparing(QuoteStatistics.MakeModelPremiumSummary::getSoldPolicies, Comparator.reverseOrder())
+                .thenComparing(QuoteStatistics.MakeModelPremiumSummary::getMake)
+                .thenComparing(QuoteStatistics.MakeModelPremiumSummary::getModel));
+
+        if (results.size() > limit) {
+            return new ArrayList<>(results.subList(0, limit));
+        }
+        return results;
+    }
+
+    private static double findConversionRatio(List<QuoteStatistics.SalesConversionStats> stats, String expectedLabel) {
+        for (QuoteStatistics.SalesConversionStats stat : stats) {
+            if (expectedLabel.equalsIgnoreCase(stat.getLabel())) {
+                long total = stat.getTotalRequests();
+                if (total == 0) {
+                    return 0.0;
+                }
+                return stat.getSoldPolicies() / (double) total;
+            }
+        }
+        return 0.0;
+    }
+
     private static List<QuoteStatistics.ManufactureYearStats> computeManufactureYearStats(List<QuoteRecord> records) {
         LinkedHashMap<String, OutcomeAccumulator> predefinedBuckets = new LinkedHashMap<>();
         OutcomeAccumulator before2000 = new OutcomeAccumulator();
@@ -919,6 +1018,77 @@ public final class QuoteStatisticsCalculator {
 
         private QuoteStatistics.SalesConversionStats toSalesConversionStats(String label) {
             return new QuoteStatistics.SalesConversionStats(label, totalRequests, successfulQuotes, soldPolicies);
+        }
+    }
+
+    private static final class PremiumAccumulator {
+        private long soldPolicies;
+        private BigDecimal totalPremium = BigDecimal.ZERO;
+
+        private void incrementPolicies() {
+            soldPolicies++;
+        }
+
+        private void addPremium(BigDecimal premium) {
+            if (premium == null) {
+                return;
+            }
+            totalPremium = totalPremium.add(premium);
+        }
+
+        private long getSoldPolicies() {
+            return soldPolicies;
+        }
+
+        private BigDecimal getTotalPremium() {
+            return totalPremium;
+        }
+
+        private QuoteStatistics.SalesPremiumBreakdown toBodyTypeBreakdown(String label) {
+            return new QuoteStatistics.SalesPremiumBreakdown(label, soldPolicies, totalPremium);
+        }
+
+        private QuoteStatistics.MakeModelPremiumSummary toMakeModelSummary(MakeModelKey key) {
+            return new QuoteStatistics.MakeModelPremiumSummary(key.getMake(), key.getModel(), soldPolicies, totalPremium);
+        }
+    }
+
+    private static final class MakeModelKey {
+        private final String make;
+        private final String model;
+
+        private MakeModelKey(String make, String model) {
+            this.make = make;
+            this.model = model;
+        }
+
+        private static MakeModelKey from(QuoteRecord record) {
+            return new MakeModelKey(record.getMakeLabel(), record.getModelLabel());
+        }
+
+        private String getMake() {
+            return make;
+        }
+
+        private String getModel() {
+            return model;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (!(obj instanceof MakeModelKey)) {
+                return false;
+            }
+            MakeModelKey other = (MakeModelKey) obj;
+            return Objects.equals(make, other.make) && Objects.equals(model, other.model);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(make, model);
         }
     }
 

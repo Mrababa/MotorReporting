@@ -1,6 +1,7 @@
 package com.example.motorreporting;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -28,6 +29,7 @@ public class HtmlReportGenerator {
     private static final String LOGO_URL = "https://www.shory.com/imgs/master/logo.svg";
     private static final DecimalFormat INTEGER_FORMAT;
     private static final DecimalFormat PERCENT_FORMAT;
+    private static final DecimalFormat CURRENCY_FORMAT;
     private static final DateTimeFormatter HEADER_DATE_FORMAT =
             DateTimeFormatter.ofPattern("yyyy-MM-dd", Locale.US);
     private static final String SPEC_GCC_LABEL = "GCC";
@@ -40,6 +42,7 @@ public class HtmlReportGenerator {
         DecimalFormatSymbols symbols = DecimalFormatSymbols.getInstance(Locale.US);
         INTEGER_FORMAT = new DecimalFormat("#,##0", symbols);
         PERCENT_FORMAT = new DecimalFormat("#0.0%", symbols);
+        CURRENCY_FORMAT = new DecimalFormat("#,##0.00", symbols);
     }
 
     public void generate(Path outputPath,
@@ -325,6 +328,18 @@ public class HtmlReportGenerator {
         html.append("        }\n");
         html.append("        .table-card tbody tr:last-child td {\n");
         html.append("            border-bottom: none;\n");
+        html.append("        }\n");
+        html.append("        .table-grid {\n");
+        html.append("            display: grid;\n");
+        html.append("            gap: 1.5rem;\n");
+        html.append("            margin-top: 2rem;\n");
+        html.append("            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));\n");
+        html.append("        }\n");
+        html.append("        .table-subtext {\n");
+        html.append("            display: block;\n");
+        html.append("            margin-top: 0.35rem;\n");
+        html.append("            font-size: 0.85rem;\n");
+        html.append("            color: #6b7280;\n");
         html.append("        }\n");
         html.append("        .numeric {\n");
         html.append("            text-align: right;\n");
@@ -619,6 +634,22 @@ public class HtmlReportGenerator {
         html.append("      <h2 class=\"section-title\">Comprehensive Sales Conversion</h2>\n");
         html.append("      <p>Understand how comprehensive quotes convert into policies by key demographic groups.</p>\n");
         html.append("    </div>\n");
+        html.append("    <div class=\"summary-grid\">\n");
+        appendSummaryCard(html, "Total Policies Sold", formatInteger(compPoliciesSold), "#0f766e");
+        appendSummaryCard(html, "Total Premium", formatCurrency(compTotalPremium), "#f59e0b");
+        appendSummaryCard(html, "Chinese Market Conversion", PERCENT_FORMAT.format(compChineseSalesRatio), "#2563eb");
+        appendSummaryCard(html, "Electric Vehicles Conversion", PERCENT_FORMAT.format(compElectricSalesRatio), "#7c3aed");
+        html.append("    </div>\n");
+        html.append("    <div class=\"table-grid\">\n");
+        appendBodyTypePremiumTable(html, "Sales Breakdown by Body Type", compBodyPremiumBreakdowns);
+        appendTopModelsByPremiumTable(html, "Top 10 Performing Models", compTopModelsByPremium);
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <h2>Body Type Premium & Policy Mix</h2>\n");
+        html.append("        <canvas id=\"compSalesBodyPremiumChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
         html.append("        <div class=\"chart-card__header\">\n");
@@ -746,6 +777,10 @@ public class HtmlReportGenerator {
     }
 
     private void appendSummaryCard(StringBuilder html, String label, long value, String accentColor) {
+        appendSummaryCard(html, label, formatInteger(value), accentColor);
+    }
+
+    private void appendSummaryCard(StringBuilder html, String label, String formattedValue, String accentColor) {
         html.append("    <div class=\"summary-card\" style=\"--accent: ")
                 .append(escapeHtml(accentColor))
                 .append(";\">\n");
@@ -753,7 +788,7 @@ public class HtmlReportGenerator {
                 .append(escapeHtml(label))
                 .append("</div>\n");
         html.append("      <div class=\"summary-value\">")
-                .append(escapeHtml(formatInteger(value)))
+                .append(escapeHtml(formattedValue))
                 .append("</div>\n");
         html.append("    </div>\n");
     }
@@ -1012,6 +1047,86 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
+    private void appendBodyTypePremiumTable(StringBuilder html,
+                                            String heading,
+                                            List<QuoteStatistics.SalesPremiumBreakdown> breakdowns) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        if (breakdowns.isEmpty()) {
+            html.append("      <p class=\"empty-state\">No comprehensive sales recorded.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">Body Type</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Policies Sold</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Total Premium</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        for (QuoteStatistics.SalesPremiumBreakdown breakdown : breakdowns) {
+            html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(breakdown.getLabel()))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatInteger(breakdown.getSoldPolicies())))
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatCurrency(breakdown.getTotalPremium())))
+                    .append("</td>\n");
+            html.append("          </tr>\n");
+        }
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
+    private void appendTopModelsByPremiumTable(StringBuilder html,
+                                               String heading,
+                                               List<QuoteStatistics.MakeModelPremiumSummary> summaries) {
+        html.append("    <div class=\"table-card\">\n");
+        html.append("      <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        if (summaries.isEmpty()) {
+            html.append("      <p class=\"empty-state\">No issued policies found for comprehensive models.</p>\n");
+            html.append("    </div>\n");
+            return;
+        }
+        html.append("      <table>\n");
+        html.append("        <thead>\n");
+        html.append("          <tr>\n");
+        html.append("            <th scope=\"col\">Make / Model</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Total Premium</th>\n");
+        html.append("          </tr>\n");
+        html.append("        </thead>\n");
+        html.append("        <tbody>\n");
+        for (QuoteStatistics.MakeModelPremiumSummary summary : summaries) {
+            html.append("          <tr>\n");
+            html.append("            <td>")
+                    .append(escapeHtml(summary.getMake()))
+                    .append(" / ")
+                    .append(escapeHtml(summary.getModel()))
+                    .append("<span class=\"table-subtext\">")
+                    .append(escapeHtml(formatInteger(summary.getSoldPolicies())))
+                    .append(" policies sold</span>")
+                    .append("</td>\n");
+            html.append("            <td class=\"numeric\">")
+                    .append(escapeHtml(formatCurrency(summary.getTotalPremium())))
+                    .append("</td>\n");
+            html.append("          </tr>\n");
+        }
+        html.append("        </tbody>\n");
+        html.append("      </table>\n");
+        html.append("    </div>\n");
+    }
+
+
     private void appendEidChassisSummaryTable(StringBuilder html,
                                               String heading,
                                               QuoteStatistics.EidChassisSummary summary) {
@@ -1102,6 +1217,14 @@ public class HtmlReportGenerator {
         long tplUniqueFailureCount = tplUniqueRequests.getFailureCount();
         long compUniqueSuccessCount = compUniqueRequests.getSuccessCount();
         long compUniqueFailureCount = compUniqueRequests.getFailureCount();
+        long compPoliciesSold = statistics.getComprehensivePoliciesSold();
+        BigDecimal compTotalPremium = statistics.getComprehensiveTotalPremium();
+        double compChineseSalesRatio = statistics.getComprehensiveChineseSalesRatio();
+        double compElectricSalesRatio = statistics.getComprehensiveElectricSalesRatio();
+        List<QuoteStatistics.SalesPremiumBreakdown> compBodyPremiumBreakdowns =
+                statistics.getComprehensiveBodyTypePremiums();
+        List<QuoteStatistics.MakeModelPremiumSummary> compTopModelsByPremium =
+                statistics.getComprehensiveTopModelsByPremium();
 
         Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyOutcomes = statistics.getTplBodyCategoryOutcomes();
         Map<String, QuoteStatistics.OutcomeBreakdown> tplChineseOutcomes = statistics.getTplChineseOutcomeBreakdown();
@@ -1126,6 +1249,11 @@ public class HtmlReportGenerator {
         List<QuoteStatistics.SalesConversionStats> compSalesByChinese =
                 statistics.getComprehensiveSalesByChineseClassification();
         List<QuoteStatistics.SalesConversionStats> compSalesByFuel = statistics.getComprehensiveSalesByFuelType();
+        List<String> compBodyPremiumLabels = new ArrayList<>();
+        List<Long> compBodyPremiumPolicies = new ArrayList<>();
+        List<BigDecimal> compBodyPremiumPremiums = new ArrayList<>();
+        populatePremiumChartData(compBodyPremiumBreakdowns, compBodyPremiumLabels,
+                compBodyPremiumPolicies, compBodyPremiumPremiums);
         List<QuoteStatistics.TrendPoint> overallManufactureYearTrend = statistics.getManufactureYearTrend();
         List<QuoteStatistics.TrendPoint> overallCustomerAgeTrend = statistics.getCustomerAgeTrend();
 
@@ -1598,6 +1726,9 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
+        script.append("  const compBodyPremiumLabels = ").append(toJsStringArray(compBodyPremiumLabels)).append(";\n");
+        script.append("  const compBodyPremiumPolicies = ").append(toJsNumberArray(compBodyPremiumPolicies)).append(";\n");
+        script.append("  const compBodyPremiumPremiums = ").append(toJsNumberArray(compBodyPremiumPremiums)).append(";\n");
         script.append("  const tplSalesBodyLabels = ").append(toJsStringArray(tplSalesBodyLabels)).append(";\n");
         script.append("  const tplSalesBodyTotals = ").append(toJsNumberArray(tplSalesBodyTotals)).append(";\n");
         script.append("  const tplSalesBodySuccessCounts = ").append(toJsNumberArray(tplSalesBodySuccessCounts)).append(";\n");
@@ -1818,6 +1949,63 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
+        script.append("  const compBodyPremiumChartData = {\n");
+        script.append("    labels: compBodyPremiumLabels,\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        type: 'bar',\n");
+        script.append("        label: 'Policies Sold',\n");
+        script.append("        data: compBodyPremiumPolicies,\n");
+        script.append("        backgroundColor: '#2563eb',\n");
+        script.append("        borderRadius: 8,\n");
+        script.append("        yAxisID: 'yPolicies'\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        type: 'line',\n");
+        script.append("        label: 'Total Premium',\n");
+        script.append("        data: compBodyPremiumPremiums,\n");
+        script.append("        borderColor: '#f59e0b',\n");
+        script.append("        backgroundColor: 'rgba(245, 158, 11, 0.25)',\n");
+        script.append("        borderWidth: 3,\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true,\n");
+        script.append("        pointRadius: 4,\n");
+        script.append("        pointHoverRadius: 6,\n");
+        script.append("        yAxisID: 'yPremium'\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const compBodyPremiumChartOptions = {\n");
+        script.append("    responsive: true,\n");
+        script.append("    interaction: { mode: 'index', intersect: false },\n");
+        script.append("    scales: {\n");
+        script.append("      yPolicies: {\n");
+        script.append("        beginAtZero: true,\n");
+        script.append("        position: 'left',\n");
+        script.append("        ticks: { callback: value => Number(value).toLocaleString() }\n");
+        script.append("      },\n");
+        script.append("      yPremium: {\n");
+        script.append("        beginAtZero: true,\n");
+        script.append("        position: 'right',\n");
+        script.append("        grid: { drawOnChartArea: false },\n");
+        script.append("        ticks: { callback: value => `AED ${Number(value).toLocaleString(undefined, { minimumFractionDigits: 0 })}` }\n");
+        script.append("      }\n");
+        script.append("    },\n");
+        script.append("    plugins: {\n");
+        script.append("      legend: { display: true, position: 'bottom', labels: { usePointStyle: true } },\n");
+        script.append("      tooltip: {\n");
+        script.append("        callbacks: {\n");
+        script.append("          label: ctx => {\n");
+        script.append("            const rawValue = ctx.raw == null ? 0 : ctx.raw;\n");
+        script.append("            if (ctx.dataset.yAxisID === 'yPremium') {\n");
+        script.append("              return `${ctx.dataset.label}: AED ${Number(rawValue).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;\n");
+        script.append("            }\n");
+        script.append("            return `${ctx.dataset.label}: ${Number(rawValue).toLocaleString()}`;\n");
+        script.append("          }\n");
+        script.append("        }\n");
+        script.append("      }\n");
+        script.append("    }\n");
+        script.append("  };\n");
         script.append("  const compSalesChineseRatioData = {\n");
         script.append("    labels: compSalesChineseLabels,\n");
         script.append("    datasets: [\n");
@@ -1938,6 +2126,7 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
+        script.append("  new Chart(document.getElementById('compSalesBodyPremiumChart'), { type: 'bar', data: compBodyPremiumChartData, options: compBodyPremiumChartOptions });\n");
         script.append("  const tplSalesBodyStats = buildSalesStats(tplSalesBodyLabels, tplSalesBodyTotals, tplSalesBodySuccessCounts, tplSalesBodySoldCounts);\n");
         script.append("  const tplSalesAgeStats = buildSalesStats(tplSalesAgeLabels, tplSalesAgeTotals, tplSalesAgeSuccessCounts, tplSalesAgeSoldCounts);\n");
         script.append("  const compSalesBodyStats = buildSalesStats(compSalesBodyLabels, compSalesBodyTotals, compSalesBodySuccessCounts, compSalesBodySoldCounts);\n");
@@ -2093,12 +2282,34 @@ public class HtmlReportGenerator {
         }
     }
 
+    private void populatePremiumChartData(List<QuoteStatistics.SalesPremiumBreakdown> breakdowns,
+                                          List<String> labels,
+                                          List<Long> policies,
+                                          List<BigDecimal> premiums) {
+        if (breakdowns.isEmpty()) {
+            labels.add("No Data");
+            policies.add(0L);
+            premiums.add(BigDecimal.ZERO);
+            return;
+        }
+        for (QuoteStatistics.SalesPremiumBreakdown breakdown : breakdowns) {
+            labels.add(breakdown.getLabel());
+            policies.add(breakdown.getSoldPolicies());
+            premiums.add(breakdown.getTotalPremium());
+        }
+    }
+
     private static String formatPercentage(long numerator, long denominator) {
         if (denominator == 0) {
             return PERCENT_FORMAT.format(0);
         }
         double ratio = (double) numerator / denominator;
         return PERCENT_FORMAT.format(ratio);
+    }
+
+    private static String formatCurrency(BigDecimal value) {
+        BigDecimal safeValue = value == null ? BigDecimal.ZERO : value;
+        return "AED " + CURRENCY_FORMAT.format(safeValue);
     }
 
     private static String toJsStringLiteral(String value) {
