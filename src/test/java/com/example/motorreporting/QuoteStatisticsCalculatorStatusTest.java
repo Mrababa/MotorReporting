@@ -184,6 +184,24 @@ class QuoteStatisticsCalculatorStatusTest {
         assertEquals(1, compToyota.getUniqueChassisCount());
         assertEquals(0, compToyota.getSuccessfulUniqueChassisCount());
         assertEquals(1, compToyota.getFailedUniqueChassisCount());
+
+        List<QuoteStatistics.MakeModelChassisSummary> compRejected =
+                statistics.getComprehensiveTopRejectedModelsByUniqueChassis();
+        assertEquals(2, compRejected.size());
+
+        QuoteStatistics.MakeModelChassisSummary rejectedHonda = compRejected.get(0);
+        assertEquals("Honda", rejectedHonda.getMake());
+        assertEquals("Civic", rejectedHonda.getModel());
+        assertEquals(2, rejectedHonda.getUniqueChassisCount());
+        assertEquals(1, rejectedHonda.getSuccessfulUniqueChassisCount());
+        assertEquals(1, rejectedHonda.getFailedUniqueChassisCount());
+
+        QuoteStatistics.MakeModelChassisSummary rejectedToyota = compRejected.get(1);
+        assertEquals("Toyota", rejectedToyota.getMake());
+        assertEquals("Corolla", rejectedToyota.getModel());
+        assertEquals(1, rejectedToyota.getUniqueChassisCount());
+        assertEquals(0, rejectedToyota.getSuccessfulUniqueChassisCount());
+        assertEquals(1, rejectedToyota.getFailedUniqueChassisCount());
     }
 
     @Test

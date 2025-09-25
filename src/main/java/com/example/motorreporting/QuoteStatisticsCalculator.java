@@ -29,6 +29,7 @@ public final class QuoteStatisticsCalculator {
     }
 
     private static final int TOP_REJECTED_MODEL_LIMIT = 10;
+    private static final int TOP_REJECTED_MAKE_MODEL_LIMIT = 20;
     private static final int TOP_REQUESTED_MAKE_MODEL_LIMIT = 20;
     private static final String SPEC_LABEL_GCC = "GCC";
     private static final String SPEC_LABEL_NON_GCC = "Non GCC";
@@ -127,6 +128,8 @@ public final class QuoteStatisticsCalculator {
                 computeTopMakeModelByUniqueChassis(tplRecords, TOP_REQUESTED_MAKE_MODEL_LIMIT);
         List<QuoteStatistics.MakeModelChassisSummary> compTopRequestedMakeModels =
                 computeTopMakeModelByUniqueChassis(compRecords, TOP_REQUESTED_MAKE_MODEL_LIMIT);
+        List<QuoteStatistics.MakeModelChassisSummary> compTopRejectedMakeModels =
+                computeTopRejectedMakeModelByUniqueChassis(compRecords, TOP_REJECTED_MAKE_MODEL_LIMIT);
         List<QuoteStatistics.CategoryCount> uniqueChassisBySpecification =
                 computeUniqueChassisCountsBySpecification(records);
         List<QuoteStatistics.CategoryCount> uniqueChassisByInsurancePurpose =
@@ -166,6 +169,7 @@ public final class QuoteStatisticsCalculator {
                 topRequestedMakeModels,
                 tplTopRequestedMakeModels,
                 compTopRequestedMakeModels,
+                compTopRejectedMakeModels,
                 tplErrorCounts,
                 compErrorCounts,
                 uniqueChassisBySpecification,
@@ -461,6 +465,45 @@ public final class QuoteStatisticsCalculator {
             return new ArrayList<>(results.subList(0, limit));
         }
         return results;
+    }
+
+    private static List<QuoteStatistics.MakeModelChassisSummary> computeTopRejectedMakeModelByUniqueChassis(
+            List<QuoteRecord> records,
+            int limit) {
+        if (limit <= 0) {
+            return Collections.emptyList();
+        }
+        Map<MakeModelKey, MakeModelChassisAccumulator> accumulatorByMakeModel = new HashMap<>();
+        for (QuoteRecord record : records) {
+            if (!record.isFailure() && !record.isSuccessful()) {
+                continue;
+            }
+            String chassis = normalizeChassisNumber(record.getChassisNumber().orElse(null));
+            if (chassis == null) {
+                continue;
+            }
+            MakeModelKey key = new MakeModelKey(record.getMakeLabel(), record.getModelLabel());
+            MakeModelChassisAccumulator accumulator =
+                    accumulatorByMakeModel.computeIfAbsent(key, ignored -> new MakeModelChassisAccumulator());
+            accumulator.record(chassis, record.isSuccessful(), record.isFailure());
+        }
+
+        List<QuoteStatistics.MakeModelChassisSummary> summaries = accumulatorByMakeModel.entrySet().stream()
+                .map(entry -> entry.getValue().toSummary(entry.getKey()))
+                .filter(summary -> summary.getFailedUniqueChassisCount() > 0)
+                .sorted(Comparator
+                        .comparingLong(QuoteStatistics.MakeModelChassisSummary::getFailedUniqueChassisCount)
+                        .reversed()
+                        .thenComparingLong(QuoteStatistics.MakeModelChassisSummary::getUniqueChassisCount)
+                        .reversed()
+                        .thenComparing(QuoteStatistics.MakeModelChassisSummary::getMake)
+                        .thenComparing(QuoteStatistics.MakeModelChassisSummary::getModel))
+                .collect(Collectors.toList());
+
+        if (summaries.size() > limit) {
+            return new ArrayList<>(summaries.subList(0, limit));
+        }
+        return summaries;
     }
 
     private static List<QuoteStatistics.CategoryCount> computeUniqueChassisCountsBySpecification(

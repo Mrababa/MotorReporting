@@ -537,6 +537,8 @@ public class HtmlReportGenerator {
         appendOutcomeTable(html, "Comprehensive Specification Outcomes (GCC vs Non-GCC)", compSpecificationSummary);
         appendMakeModelTable(html, "Top 20 Make & Model by Unique Chassis (Comprehensive)",
                 statistics.getComprehensiveTopRequestedMakeModelsByUniqueChassis());
+        appendMakeModelTable(html, "Top 20 Rejected Models (Unique Chassis)",
+                statistics.getComprehensiveTopRejectedModelsByUniqueChassis());
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card\">\n");
         html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
