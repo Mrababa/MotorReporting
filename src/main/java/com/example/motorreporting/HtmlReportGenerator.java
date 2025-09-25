@@ -92,6 +92,15 @@ public class HtmlReportGenerator {
         String headerText = buildHeaderText(records, reportDateRange);
         Optional<String> insuranceCompanyName = findInsuranceCompanyName(records);
 
+        long compPoliciesSold = statistics.getComprehensivePoliciesSold();
+        BigDecimal compTotalPremium = statistics.getComprehensiveTotalPremium();
+        double compChineseSalesRatio = statistics.getComprehensiveChineseSalesRatio();
+        double compElectricSalesRatio = statistics.getComprehensiveElectricSalesRatio();
+        List<QuoteStatistics.SalesPremiumBreakdown> compBodyPremiumBreakdowns =
+                statistics.getComprehensiveBodyTypePremiums();
+        List<QuoteStatistics.MakeModelPremiumSummary> compTopModelsByPremium =
+                statistics.getComprehensiveTopModelsByPremium();
+
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html>\n");
         html.append("<html lang=\"en\">\n");
