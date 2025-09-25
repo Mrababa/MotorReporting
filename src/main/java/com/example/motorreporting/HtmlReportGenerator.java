@@ -603,6 +603,16 @@ public class HtmlReportGenerator {
         html.append("        <canvas id=\"tplSalesAgeChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <h2>Chinese Quotes Conversion Ratio</h2>\n");
+        html.append("        <canvas id=\"tplSalesChineseChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <h2>Electric Vehicles Conversion Ratio</h2>\n");
+        html.append("        <canvas id=\"tplSalesFuelChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
         html.append("  </section>\n");
         html.append("  <section id=\"comprehensive-sales\" class=\"page-section\">\n");
         html.append("    <div class=\"summary-section\">\n");
@@ -629,6 +639,16 @@ public class HtmlReportGenerator {
         html.append("          </div>\n");
         html.append("        </div>\n");
         html.append("        <canvas id=\"compSalesAgeChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <h2>Chinese Quotes Conversion Ratio</h2>\n");
+        html.append("        <canvas id=\"compSalesChineseChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <h2>Electric Vehicles Conversion Ratio</h2>\n");
+        html.append("        <canvas id=\"compSalesFuelChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("  </section>\n");
@@ -1098,8 +1118,14 @@ public class HtmlReportGenerator {
         List<QuoteStatistics.ValueRangeStats> compValueStats = statistics.getComprehensiveEstimatedValueStats();
         List<QuoteStatistics.SalesConversionStats> tplSalesByBody = statistics.getTplSalesByBodyType();
         List<QuoteStatistics.SalesConversionStats> tplSalesByAge = statistics.getTplSalesByAgeRange();
+        List<QuoteStatistics.SalesConversionStats> tplSalesByChinese =
+                statistics.getTplSalesByChineseClassification();
+        List<QuoteStatistics.SalesConversionStats> tplSalesByFuel = statistics.getTplSalesByFuelType();
         List<QuoteStatistics.SalesConversionStats> compSalesByBody = statistics.getComprehensiveSalesByBodyType();
         List<QuoteStatistics.SalesConversionStats> compSalesByAge = statistics.getComprehensiveSalesByAgeRange();
+        List<QuoteStatistics.SalesConversionStats> compSalesByChinese =
+                statistics.getComprehensiveSalesByChineseClassification();
+        List<QuoteStatistics.SalesConversionStats> compSalesByFuel = statistics.getComprehensiveSalesByFuelType();
         List<QuoteStatistics.TrendPoint> overallManufactureYearTrend = statistics.getManufactureYearTrend();
         List<QuoteStatistics.TrendPoint> overallCustomerAgeTrend = statistics.getCustomerAgeTrend();
 
@@ -1254,6 +1280,30 @@ public class HtmlReportGenerator {
         List<Long> compSalesAgeSoldCounts = new ArrayList<>();
         populateSalesChartData(compSalesByAge, compSalesAgeLabels, compSalesAgeTotals,
                 compSalesAgeSuccessCounts, compSalesAgeSoldCounts);
+
+        List<String> tplSalesChineseLabels = new ArrayList<>();
+        List<Double> tplSalesChineseConvertedRatios = new ArrayList<>();
+        List<Double> tplSalesChineseNotConvertedRatios = new ArrayList<>();
+        populateConversionRatioData(tplSalesByChinese, tplSalesChineseLabels,
+                tplSalesChineseConvertedRatios, tplSalesChineseNotConvertedRatios);
+
+        List<String> tplSalesFuelLabels = new ArrayList<>();
+        List<Double> tplSalesFuelConvertedRatios = new ArrayList<>();
+        List<Double> tplSalesFuelNotConvertedRatios = new ArrayList<>();
+        populateConversionRatioData(tplSalesByFuel, tplSalesFuelLabels,
+                tplSalesFuelConvertedRatios, tplSalesFuelNotConvertedRatios);
+
+        List<String> compSalesChineseLabels = new ArrayList<>();
+        List<Double> compSalesChineseConvertedRatios = new ArrayList<>();
+        List<Double> compSalesChineseNotConvertedRatios = new ArrayList<>();
+        populateConversionRatioData(compSalesByChinese, compSalesChineseLabels,
+                compSalesChineseConvertedRatios, compSalesChineseNotConvertedRatios);
+
+        List<String> compSalesFuelLabels = new ArrayList<>();
+        List<Double> compSalesFuelConvertedRatios = new ArrayList<>();
+        List<Double> compSalesFuelNotConvertedRatios = new ArrayList<>();
+        populateConversionRatioData(compSalesByFuel, compSalesFuelLabels,
+                compSalesFuelConvertedRatios, compSalesFuelNotConvertedRatios);
 
         List<String> tplManufactureYearLabels = new ArrayList<>();
         List<Double> tplManufactureYearSuccessRatios = new ArrayList<>();
@@ -1564,6 +1614,18 @@ public class HtmlReportGenerator {
         script.append("  const compSalesAgeTotals = ").append(toJsNumberArray(compSalesAgeTotals)).append(";\n");
         script.append("  const compSalesAgeSuccessCounts = ").append(toJsNumberArray(compSalesAgeSuccessCounts)).append(";\n");
         script.append("  const compSalesAgeSoldCounts = ").append(toJsNumberArray(compSalesAgeSoldCounts)).append(";\n");
+        script.append("  const tplSalesChineseLabels = ").append(toJsStringArray(tplSalesChineseLabels)).append(";\n");
+        script.append("  const tplSalesChineseConverted = ").append(toJsDoubleArray(tplSalesChineseConvertedRatios)).append(";\n");
+        script.append("  const tplSalesChineseNotConverted = ").append(toJsDoubleArray(tplSalesChineseNotConvertedRatios)).append(";\n");
+        script.append("  const tplSalesFuelLabels = ").append(toJsStringArray(tplSalesFuelLabels)).append(";\n");
+        script.append("  const tplSalesFuelConverted = ").append(toJsDoubleArray(tplSalesFuelConvertedRatios)).append(";\n");
+        script.append("  const tplSalesFuelNotConverted = ").append(toJsDoubleArray(tplSalesFuelNotConvertedRatios)).append(";\n");
+        script.append("  const compSalesChineseLabels = ").append(toJsStringArray(compSalesChineseLabels)).append(";\n");
+        script.append("  const compSalesChineseConverted = ").append(toJsDoubleArray(compSalesChineseConvertedRatios)).append(";\n");
+        script.append("  const compSalesChineseNotConverted = ").append(toJsDoubleArray(compSalesChineseNotConvertedRatios)).append(";\n");
+        script.append("  const compSalesFuelLabels = ").append(toJsStringArray(compSalesFuelLabels)).append(";\n");
+        script.append("  const compSalesFuelConverted = ").append(toJsDoubleArray(compSalesFuelConvertedRatios)).append(";\n");
+        script.append("  const compSalesFuelNotConverted = ").append(toJsDoubleArray(compSalesFuelNotConvertedRatios)).append(";\n");
         script.append("  const tplBodyLabels = ").append(toJsStringArray(tplBodyLabels)).append(";\n");
         script.append("  const tplBodySuccessData = {\n");
         script.append("    labels: tplBodyLabels,\n");
@@ -1718,6 +1780,82 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
+        script.append("  const tplSalesChineseRatioData = {\n");
+        script.append("    labels: tplSalesChineseLabels,\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Converted',\n");
+        script.append("        data: tplSalesChineseConverted,\n");
+        script.append("        backgroundColor: '#16a34a',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Not Converted',\n");
+        script.append("        data: tplSalesChineseNotConverted,\n");
+        script.append("        backgroundColor: '#dc2626',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const tplSalesFuelRatioData = {\n");
+        script.append("    labels: tplSalesFuelLabels,\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Converted',\n");
+        script.append("        data: tplSalesFuelConverted,\n");
+        script.append("        backgroundColor: '#0ea5e9',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Not Converted',\n");
+        script.append("        data: tplSalesFuelNotConverted,\n");
+        script.append("        backgroundColor: '#f59e0b',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const compSalesChineseRatioData = {\n");
+        script.append("    labels: compSalesChineseLabels,\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Converted',\n");
+        script.append("        data: compSalesChineseConverted,\n");
+        script.append("        backgroundColor: '#16a34a',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Not Converted',\n");
+        script.append("        data: compSalesChineseNotConverted,\n");
+        script.append("        backgroundColor: '#dc2626',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const compSalesFuelRatioData = {\n");
+        script.append("    labels: compSalesFuelLabels,\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Converted',\n");
+        script.append("        data: compSalesFuelConverted,\n");
+        script.append("        backgroundColor: '#0ea5e9',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Not Converted',\n");
+        script.append("        data: compSalesFuelNotConverted,\n");
+        script.append("        backgroundColor: '#f59e0b',\n");
+        script.append("        stack: 'conversion',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
         script.append("  const tplChineseElectricSegmentData = {\n");
         script.append("    labels: ").append(toJsStringArray(tplChineseElectricLabels)).append(",\n");
         script.append("    datasets: [\n");
@@ -1812,6 +1950,10 @@ public class HtmlReportGenerator {
         script.append("  registerConversionToggle('tplSalesAge', tplSalesAgeChart);\n");
         script.append("  registerConversionToggle('compSalesBody', compSalesBodyChart);\n");
         script.append("  registerConversionToggle('compSalesAge', compSalesAgeChart);\n");
+        script.append("  new Chart(document.getElementById('tplSalesChineseChart'), { type: 'bar', data: tplSalesChineseRatioData, options: stackedRatioOptions });\n");
+        script.append("  new Chart(document.getElementById('tplSalesFuelChart'), { type: 'bar', data: tplSalesFuelRatioData, options: stackedRatioOptions });\n");
+        script.append("  new Chart(document.getElementById('compSalesChineseChart'), { type: 'bar', data: compSalesChineseRatioData, options: stackedRatioOptions });\n");
+        script.append("  new Chart(document.getElementById('compSalesFuelChart'), { type: 'bar', data: compSalesFuelRatioData, options: stackedRatioOptions });\n");
         script.append("  new Chart(document.getElementById('tplChineseOutcomeChart'), { type: 'bar', data: tplChineseOutcomeData, options: stackedRatioOptions });\n");
         script.append("  new Chart(document.getElementById('tplElectricOutcomeChart'), { type: 'bar', data: tplElectricOutcomeData, options: stackedRatioOptions });\n");
         script.append("  new Chart(document.getElementById('tplChineseElectricSegmentChart'), { type: 'bar', data: tplChineseElectricSegmentData, options: stackedRatioOptions });\n");
@@ -1925,6 +2067,29 @@ public class HtmlReportGenerator {
             totalRequests.add(stat.getTotalRequests());
             successfulQuotes.add(stat.getSuccessfulQuotes());
             soldPolicies.add(stat.getSoldPolicies());
+        }
+    }
+
+    private void populateConversionRatioData(List<QuoteStatistics.SalesConversionStats> stats,
+                                             List<String> labels,
+                                             List<Double> convertedRatios,
+                                             List<Double> notConvertedRatios) {
+        if (stats.isEmpty()) {
+            labels.add("No Data");
+            convertedRatios.add(0.0);
+            notConvertedRatios.add(0.0);
+            return;
+        }
+
+        for (QuoteStatistics.SalesConversionStats stat : stats) {
+            long total = stat.getTotalRequests();
+            long convertedCount = stat.getSoldPolicies();
+            long notConvertedCount = Math.max(0L, total - convertedCount);
+            double convertedRatio = total == 0 ? 0.0 : (convertedCount * 100.0) / total;
+            double notConvertedRatio = total == 0 ? 0.0 : (notConvertedCount * 100.0) / total;
+            labels.add(stat.getLabel());
+            convertedRatios.add(convertedRatio);
+            notConvertedRatios.add(notConvertedRatio);
         }
     }
 

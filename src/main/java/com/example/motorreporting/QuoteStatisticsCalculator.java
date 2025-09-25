@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.Function;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -120,10 +121,18 @@ public final class QuoteStatisticsCalculator {
                 computeSalesConversionByBodyType(tplRecords);
         List<QuoteStatistics.SalesConversionStats> tplSalesByAgeRange =
                 computeSalesConversionByAgeRange(tplRecords);
+        List<QuoteStatistics.SalesConversionStats> tplSalesByChineseClassification =
+                computeSalesConversionByClassifier(tplRecords, QuoteRecord::getChineseClassificationLabel);
+        List<QuoteStatistics.SalesConversionStats> tplSalesByFuelType =
+                computeSalesConversionByClassifier(tplRecords, QuoteRecord::getElectricClassificationLabel);
         List<QuoteStatistics.SalesConversionStats> compSalesByBodyType =
                 computeSalesConversionByBodyType(compRecords);
         List<QuoteStatistics.SalesConversionStats> compSalesByAgeRange =
                 computeSalesConversionByAgeRange(compRecords);
+        List<QuoteStatistics.SalesConversionStats> compSalesByChineseClassification =
+                computeSalesConversionByClassifier(compRecords, QuoteRecord::getChineseClassificationLabel);
+        List<QuoteStatistics.SalesConversionStats> compSalesByFuelType =
+                computeSalesConversionByClassifier(compRecords, QuoteRecord::getElectricClassificationLabel);
         Map<String, Long> tplErrorCounts = computeErrorCounts(tplRecords, false);
         Map<String, Long> compErrorCounts = computeErrorCounts(compRecords, true);
         List<QuoteStatistics.ModelChassisSummary> tplTopRejectedModels =
@@ -172,8 +181,12 @@ public final class QuoteStatisticsCalculator {
                 compEstimatedValueStats,
                 tplSalesByBodyType,
                 tplSalesByAgeRange,
+                tplSalesByChineseClassification,
+                tplSalesByFuelType,
                 compSalesByBodyType,
                 compSalesByAgeRange,
+                compSalesByChineseClassification,
+                compSalesByFuelType,
                 tplTopRejectedModels,
                 topRequestedMakeModels,
                 tplTopRequestedMakeModels,
@@ -771,6 +784,33 @@ public final class QuoteStatisticsCalculator {
         QuoteStatistics.SalesConversionStats otherStats = otherAccumulator.toSalesConversionStats(OTHER_AGE_LABEL);
         if (otherStats.hasData()) {
             results.add(otherStats);
+        }
+
+        if (results.isEmpty()) {
+            results.add(new QuoteStatistics.SalesConversionStats(NO_DATA_LABEL, 0, 0, 0));
+        }
+        return results;
+    }
+
+    private static List<QuoteStatistics.SalesConversionStats> computeSalesConversionByClassifier(
+            List<QuoteRecord> records,
+            Function<QuoteRecord, String> classifier) {
+        LinkedHashMap<String, SalesAccumulator> accumulatorByLabel = new LinkedHashMap<>();
+        for (QuoteRecord record : records) {
+            String label = classifier.apply(record);
+            if (label == null || label.isEmpty()) {
+                label = NO_DATA_LABEL;
+            }
+            SalesAccumulator accumulator = accumulatorByLabel.computeIfAbsent(label, ignored -> new SalesAccumulator());
+            recordSales(accumulator, record);
+        }
+
+        List<QuoteStatistics.SalesConversionStats> results = new ArrayList<>();
+        for (Map.Entry<String, SalesAccumulator> entry : accumulatorByLabel.entrySet()) {
+            QuoteStatistics.SalesConversionStats stats = entry.getValue().toSalesConversionStats(entry.getKey());
+            if (stats.hasData()) {
+                results.add(stats);
+            }
         }
 
         if (results.isEmpty()) {
