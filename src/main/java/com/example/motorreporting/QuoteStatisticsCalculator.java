@@ -1202,41 +1202,6 @@ public final class QuoteStatisticsCalculator {
         }
     }
 
-    private static final class MakeModelKey {
-        private final String make;
-        private final String model;
-
-        private MakeModelKey(String make, String model) {
-            this.make = make;
-            this.model = model;
-        }
-
-        private String getMake() {
-            return make;
-        }
-
-        private String getModel() {
-            return model;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (this == obj) {
-                return true;
-            }
-            if (!(obj instanceof MakeModelKey)) {
-                return false;
-            }
-            MakeModelKey other = (MakeModelKey) obj;
-            return Objects.equals(make, other.make) && Objects.equals(model, other.model);
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(make, model);
-        }
-    }
-
     private static AgeRange findAgeRange(int age) {
         for (AgeRange range : AGE_RANGES) {
             if (range.contains(age)) {
