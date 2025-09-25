@@ -44,6 +44,7 @@ public class QuoteStatistics {
     private final List<MakeModelChassisSummary> comprehensiveTopRequestedMakeModelsByUniqueChassis;
     private final Map<String, Long> tplErrorCounts;
     private final Map<String, Long> comprehensiveErrorCounts;
+    private final List<CategoryCount> uniqueChassisBySpecification;
     private final List<CategoryCount> uniqueChassisByInsurancePurpose;
     private final List<CategoryCount> uniqueChassisByBodyType;
     private final List<TrendPoint> manufactureYearTrend;
@@ -77,6 +78,7 @@ public class QuoteStatistics {
                            List<MakeModelChassisSummary> comprehensiveTopRequestedMakeModelsByUniqueChassis,
                            Map<String, Long> tplErrorCounts,
                            Map<String, Long> comprehensiveErrorCounts,
+                           List<CategoryCount> uniqueChassisBySpecification,
                            List<CategoryCount> uniqueChassisByInsurancePurpose,
                            List<CategoryCount> uniqueChassisByBodyType,
                            List<TrendPoint> manufactureYearTrend,
@@ -110,6 +112,7 @@ public class QuoteStatistics {
                 immutableCopy(comprehensiveTopRequestedMakeModelsByUniqueChassis);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
         this.comprehensiveErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveErrorCounts));
+        this.uniqueChassisBySpecification = immutableCopy(uniqueChassisBySpecification);
         this.uniqueChassisByInsurancePurpose = immutableCopy(uniqueChassisByInsurancePurpose);
         this.uniqueChassisByBodyType = immutableCopy(uniqueChassisByBodyType);
         this.manufactureYearTrend = immutableCopy(manufactureYearTrend);
@@ -250,6 +253,10 @@ public class QuoteStatistics {
 
     public Map<String, Long> getComprehensiveErrorCounts() {
         return comprehensiveErrorCounts;
+    }
+
+    public List<CategoryCount> getUniqueChassisBySpecification() {
+        return uniqueChassisBySpecification;
     }
 
     public List<CategoryCount> getUniqueChassisByInsurancePurpose() {
