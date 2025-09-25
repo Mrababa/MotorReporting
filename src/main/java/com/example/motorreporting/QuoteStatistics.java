@@ -2,6 +2,7 @@ package com.example.motorreporting;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -97,22 +98,22 @@ public class QuoteStatistics {
         this.tplSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplSpecificationOutcomes));
         this.comprehensiveBodyCategoryOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveBodyCategoryOutcomes));
         this.comprehensiveSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveSpecificationOutcomes));
-        this.tplAgeRangeStats = List.copyOf(tplAgeRangeStats);
-        this.comprehensiveAgeRangeStats = List.copyOf(comprehensiveAgeRangeStats);
-        this.tplManufactureYearStats = List.copyOf(tplManufactureYearStats);
-        this.comprehensiveManufactureYearStats = List.copyOf(comprehensiveManufactureYearStats);
-        this.comprehensiveEstimatedValueStats = List.copyOf(comprehensiveEstimatedValueStats);
-        this.tplTopRejectedModelsByUniqueChassis = List.copyOf(tplTopRejectedModelsByUniqueChassis);
-        this.topRequestedMakeModelsByUniqueChassis = List.copyOf(topRequestedMakeModelsByUniqueChassis);
-        this.tplTopRequestedMakeModelsByUniqueChassis = List.copyOf(tplTopRequestedMakeModelsByUniqueChassis);
+        this.tplAgeRangeStats = immutableCopy(tplAgeRangeStats);
+        this.comprehensiveAgeRangeStats = immutableCopy(comprehensiveAgeRangeStats);
+        this.tplManufactureYearStats = immutableCopy(tplManufactureYearStats);
+        this.comprehensiveManufactureYearStats = immutableCopy(comprehensiveManufactureYearStats);
+        this.comprehensiveEstimatedValueStats = immutableCopy(comprehensiveEstimatedValueStats);
+        this.tplTopRejectedModelsByUniqueChassis = immutableCopy(tplTopRejectedModelsByUniqueChassis);
+        this.topRequestedMakeModelsByUniqueChassis = immutableCopy(topRequestedMakeModelsByUniqueChassis);
+        this.tplTopRequestedMakeModelsByUniqueChassis = immutableCopy(tplTopRequestedMakeModelsByUniqueChassis);
         this.comprehensiveTopRequestedMakeModelsByUniqueChassis =
-                List.copyOf(comprehensiveTopRequestedMakeModelsByUniqueChassis);
+                immutableCopy(comprehensiveTopRequestedMakeModelsByUniqueChassis);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
         this.comprehensiveErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveErrorCounts));
-        this.uniqueChassisByInsurancePurpose = List.copyOf(uniqueChassisByInsurancePurpose);
-        this.uniqueChassisByBodyType = List.copyOf(uniqueChassisByBodyType);
-        this.manufactureYearTrend = List.copyOf(manufactureYearTrend);
-        this.customerAgeTrend = List.copyOf(customerAgeTrend);
+        this.uniqueChassisByInsurancePurpose = immutableCopy(uniqueChassisByInsurancePurpose);
+        this.uniqueChassisByBodyType = immutableCopy(uniqueChassisByBodyType);
+        this.manufactureYearTrend = immutableCopy(manufactureYearTrend);
+        this.customerAgeTrend = immutableCopy(customerAgeTrend);
     }
 
     public QuoteGroupStats getTplStats() {
@@ -265,6 +266,10 @@ public class QuoteStatistics {
 
     public List<TrendPoint> getCustomerAgeTrend() {
         return customerAgeTrend;
+    }
+
+    private static <T> List<T> immutableCopy(List<T> values) {
+        return Collections.unmodifiableList(new ArrayList<>(values));
     }
 
     public long getOverallSkipCount() {
