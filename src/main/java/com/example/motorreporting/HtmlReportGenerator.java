@@ -1196,7 +1196,7 @@ public class HtmlReportGenerator {
         script.append("    data: Array.isArray(dataset.data) ? [...dataset.data] : dataset.data\n");
         script.append("  });\n");
         script.append("  const registerChartToggle = (toggleId, chart, seriesMap) => {\n");
-        script.append("    const toggleElement = document.querySelector(`[data-chart-toggle=\\"${toggleId}\\"]`);\n");
+        script.append("    const toggleElement = document.querySelector(`[data-chart-toggle='${toggleId}']`);\n");
         script.append("    if (!toggleElement) {\n");
         script.append("      return;\n");
         script.append("    }\n");
