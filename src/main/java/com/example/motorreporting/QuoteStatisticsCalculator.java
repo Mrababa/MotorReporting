@@ -30,6 +30,9 @@ public final class QuoteStatisticsCalculator {
 
     private static final int TOP_REJECTED_MODEL_LIMIT = 10;
     private static final int TOP_REQUESTED_MAKE_MODEL_LIMIT = 20;
+    private static final String SPEC_LABEL_GCC = "GCC";
+    private static final String SPEC_LABEL_NON_GCC = "Non GCC";
+    private static final String SPEC_LABEL_UNKNOWN = "Unknown";
 
     private static String normalizeChassisNumber(String value) {
         if (value == null) {
@@ -115,6 +118,8 @@ public final class QuoteStatisticsCalculator {
                 computeTopMakeModelByUniqueChassis(tplRecords, TOP_REQUESTED_MAKE_MODEL_LIMIT);
         List<QuoteStatistics.MakeModelChassisSummary> compTopRequestedMakeModels =
                 computeTopMakeModelByUniqueChassis(compRecords, TOP_REQUESTED_MAKE_MODEL_LIMIT);
+        List<QuoteStatistics.CategoryCount> uniqueChassisBySpecification =
+                computeUniqueChassisCountsBySpecification(records);
         List<QuoteStatistics.CategoryCount> uniqueChassisByInsurancePurpose =
                 computeUniqueChassisCounts(records, QuoteRecord::getInsurancePurposeLabel);
         List<QuoteStatistics.CategoryCount> uniqueChassisByBodyType =
@@ -150,6 +155,7 @@ public final class QuoteStatisticsCalculator {
                 compTopRequestedMakeModels,
                 tplErrorCounts,
                 compErrorCounts,
+                uniqueChassisBySpecification,
                 uniqueChassisByInsurancePurpose,
                 uniqueChassisByBodyType,
                 manufactureYearTrend,
@@ -442,6 +448,69 @@ public final class QuoteStatisticsCalculator {
             return new ArrayList<>(results.subList(0, limit));
         }
         return results;
+    }
+
+    private static List<QuoteStatistics.CategoryCount> computeUniqueChassisCountsBySpecification(
+            List<QuoteRecord> records) {
+        Map<String, Set<String>> chassisBySpecification = new LinkedHashMap<>();
+        for (QuoteRecord record : records) {
+            String chassisNumber = normalizeChassisNumber(record.getChassisNumber().orElse(null));
+            if (chassisNumber == null) {
+                continue;
+            }
+            String label = classifySpecification(record.getOverrideSpecification());
+            Set<String> chassis = chassisBySpecification.computeIfAbsent(label, ignored -> new LinkedHashSet<>());
+            chassis.add(chassisNumber);
+        }
+
+        long gccCount = chassisBySpecification.getOrDefault(SPEC_LABEL_GCC, Collections.emptySet()).size();
+        long nonGccCount = chassisBySpecification.getOrDefault(SPEC_LABEL_NON_GCC, Collections.emptySet()).size();
+        long unknownCount = chassisBySpecification.getOrDefault(SPEC_LABEL_UNKNOWN, Collections.emptySet()).size();
+
+        if (gccCount == 0 && nonGccCount == 0 && unknownCount == 0) {
+            return Collections.singletonList(new QuoteStatistics.CategoryCount("No Data", 0));
+        }
+
+        List<QuoteStatistics.CategoryCount> counts = new ArrayList<>();
+        counts.add(new QuoteStatistics.CategoryCount(SPEC_LABEL_GCC, gccCount));
+        counts.add(new QuoteStatistics.CategoryCount(SPEC_LABEL_NON_GCC, nonGccCount));
+        if (unknownCount > 0) {
+            counts.add(new QuoteStatistics.CategoryCount(SPEC_LABEL_UNKNOWN, unknownCount));
+        }
+        return counts;
+    }
+
+    private static String classifySpecification(String value) {
+        if (value == null) {
+            return SPEC_LABEL_UNKNOWN;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return SPEC_LABEL_UNKNOWN;
+        }
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (SPEC_LABEL_UNKNOWN.toLowerCase(Locale.ROOT).equals(lower)) {
+            return SPEC_LABEL_UNKNOWN;
+        }
+        String condensed = lower.replace("-", "").replace(" ", "");
+        switch (condensed) {
+            case "gcc":
+            case "gccspec":
+            case "gccspecification":
+            case "true":
+            case "1":
+            case "yes":
+                return SPEC_LABEL_GCC;
+            case "nongcc":
+            case "nonegcc":
+            case "nongccspec":
+            case "false":
+            case "0":
+            case "no":
+                return SPEC_LABEL_NON_GCC;
+            default:
+                return SPEC_LABEL_UNKNOWN;
+        }
     }
 
     private static List<QuoteStatistics.CategoryCount> computeUniqueChassisCounts(

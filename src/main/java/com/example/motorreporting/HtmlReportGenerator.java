@@ -81,7 +81,6 @@ public class HtmlReportGenerator {
         long totalQuotes = overallUniqueRequests.getTotalRequests();
         long successCount = overallUniqueRequests.getSuccessCount();
         long failCount = overallUniqueRequests.getFailureCount();
-        long uniqueCasesCount = overallUniqueRequests.getTotalRequests();
         long uniqueChassisTotal = statistics.getUniqueChassisCount();
         QuoteStatistics.EidChassisSummary tplEidChassisSummary = statistics.getTplEidChassisSummary();
         long tplEidChassisTotal = tplEidChassisSummary.getTotalRequests();
@@ -384,7 +383,6 @@ public class HtmlReportGenerator {
         appendSummaryCard(html, "Total Quotes Requested", totalQuotes, "#2563eb");
         appendSummaryCard(html, "Successful Quotes", successCount, "#16a34a");
         appendSummaryCard(html, "Failed Quotes", failCount, "#dc2626");
-        appendSummaryCard(html, "Unique Cases Count (EID + Chassis)", uniqueCasesCount, "#7c3aed");
         appendSummaryCard(html, "Unique Chassis Requested", uniqueChassisTotal, "#0891b2");
         html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
@@ -396,6 +394,10 @@ public class HtmlReportGenerator {
         html.append("        <div class=\"chart-card\">\n");
         html.append("          <h2>Comprehensive Success vs Failed</h2>\n");
         html.append("          <canvas id=\"compOutcomesChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Unique Chassis by Specification</h2>\n");
+        html.append("          <canvas id=\"overallSpecUniqueChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("        <div class=\"chart-card chart-card--wide\">\n");
         html.append("          <div class=\"chart-card__header\">\n");
@@ -1033,6 +1035,20 @@ public class HtmlReportGenerator {
         long compSpecNonGccSuccess = compNonGccBreakdown.getSuccessCount();
         long compSpecNonGccFailure = compNonGccBreakdown.getFailureCount();
 
+        List<QuoteStatistics.CategoryCount> overallSpecificationCounts =
+                statistics.getUniqueChassisBySpecification();
+        List<String> specificationLabels = new ArrayList<>();
+        List<Long> specificationValues = new ArrayList<>();
+        if (overallSpecificationCounts.isEmpty()) {
+            specificationLabels.add("No Data");
+            specificationValues.add(0L);
+        } else {
+            for (QuoteStatistics.CategoryCount count : overallSpecificationCounts) {
+                specificationLabels.add(count.getLabel());
+                specificationValues.add(count.getCount());
+            }
+        }
+
         List<String> tplBodyLabels = new ArrayList<>(tplBodyOutcomes.keySet());
         List<Long> tplBodySuccessValues = new ArrayList<>();
         List<Long> tplBodyFailureValues = new ArrayList<>();
@@ -1236,6 +1252,15 @@ public class HtmlReportGenerator {
         script.append("      label: 'Quotes',\n");
         script.append("      data: [").append(compUniqueSuccessCount).append(',').append(compUniqueFailureCount).append("],\n");
         script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
+        script.append("      borderRadius: 8\n");
+        script.append("    }]\n");
+        script.append("  };\n");
+        script.append("  const overallSpecificationData = {\n");
+        script.append("    labels: ").append(toJsStringArray(specificationLabels)).append(",\n");
+        script.append("    datasets: [{\n");
+        script.append("      label: 'Unique Chassis',\n");
+        script.append("      data: ").append(toJsNumberArray(specificationValues)).append(",\n");
+        script.append("      backgroundColor: '#0891b2',\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
@@ -1465,6 +1490,7 @@ public class HtmlReportGenerator {
         script.append("  };\n");
         script.append("  new Chart(document.getElementById('tplOutcomesChart'), { type: 'bar', data: tplData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compOutcomesChart'), { type: 'bar', data: compData, options: sharedOptions });\n");
+        script.append("  new Chart(document.getElementById('overallSpecUniqueChart'), { type: 'bar', data: overallSpecificationData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplEidChassisDedupChart'), { type: 'bar', data: tplEidChassisDedupData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodySuccessChart'), { type: 'bar', data: tplBodySuccessData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('tplBodyFailureChart'), { type: 'bar', data: tplBodyFailureData, options: sharedOptions });\n");
