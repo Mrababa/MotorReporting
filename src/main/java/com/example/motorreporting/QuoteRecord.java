@@ -564,6 +564,38 @@ public class QuoteRecord {
         return Optional.of(errorText.trim());
     }
 
+    public boolean isChineseQuote() {
+        String value = getValueIgnoreCase(rawValues, "IsChinese");
+        if (value == null) {
+            return false;
+        }
+        String normalized = value.trim();
+        if (normalized.isEmpty()) {
+            return false;
+        }
+        if ("1".equals(normalized)) {
+            return true;
+        }
+        String lowerCase = normalized.toLowerCase(Locale.ROOT);
+        return "true".equals(lowerCase) || "yes".equals(lowerCase);
+    }
+
+    public boolean isElectricVehicle() {
+        String value = getValueIgnoreCase(rawValues, "FuelType");
+        if (value == null) {
+            return false;
+        }
+        return "ELECTRIC POWER".equalsIgnoreCase(value.trim());
+    }
+
+    public String getChineseClassificationLabel() {
+        return isChineseQuote() ? "Chinese Quotes" : "Non-Chinese Quotes";
+    }
+
+    public String getElectricClassificationLabel() {
+        return isElectricVehicle() ? "Electric Vehicles" : "Non-Electric Vehicles";
+    }
+
     private static String labelOrUnknown(String value) {
         if (value == null || value.isEmpty()) {
             return "Unknown";

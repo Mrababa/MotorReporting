@@ -31,6 +31,8 @@ public class QuoteStatistics {
     private final long comprehensiveUniqueChassisFailCount;
     private final Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes;
     private final Map<String, OutcomeBreakdown> tplSpecificationOutcomes;
+    private final Map<String, OutcomeBreakdown> tplChineseOutcomes;
+    private final Map<String, OutcomeBreakdown> tplElectricOutcomes;
     private final Map<String, OutcomeBreakdown> comprehensiveBodyCategoryOutcomes;
     private final Map<String, OutcomeBreakdown> comprehensiveSpecificationOutcomes;
     private final List<AgeRangeStats> tplAgeRangeStats;
@@ -70,6 +72,8 @@ public class QuoteStatistics {
                            long comprehensiveUniqueChassisFailCount,
                            Map<String, OutcomeBreakdown> tplBodyCategoryOutcomes,
                            Map<String, OutcomeBreakdown> tplSpecificationOutcomes,
+                           Map<String, OutcomeBreakdown> tplChineseOutcomes,
+                           Map<String, OutcomeBreakdown> tplElectricOutcomes,
                            Map<String, OutcomeBreakdown> comprehensiveBodyCategoryOutcomes,
                            Map<String, OutcomeBreakdown> comprehensiveSpecificationOutcomes,
                            List<AgeRangeStats> tplAgeRangeStats,
@@ -108,6 +112,8 @@ public class QuoteStatistics {
         this.comprehensiveUniqueChassisFailCount = comprehensiveUniqueChassisFailCount;
         this.tplBodyCategoryOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplBodyCategoryOutcomes));
         this.tplSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplSpecificationOutcomes));
+        this.tplChineseOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplChineseOutcomes));
+        this.tplElectricOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(tplElectricOutcomes));
         this.comprehensiveBodyCategoryOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveBodyCategoryOutcomes));
         this.comprehensiveSpecificationOutcomes = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveSpecificationOutcomes));
         this.tplAgeRangeStats = immutableCopy(tplAgeRangeStats);
@@ -217,6 +223,14 @@ public class QuoteStatistics {
 
     public Map<String, OutcomeBreakdown> getTplSpecificationOutcomes() {
         return tplSpecificationOutcomes;
+    }
+
+    public Map<String, OutcomeBreakdown> getTplChineseOutcomeBreakdown() {
+        return tplChineseOutcomes;
+    }
+
+    public Map<String, OutcomeBreakdown> getTplElectricOutcomeBreakdown() {
+        return tplElectricOutcomes;
     }
 
     public List<AgeRangeStats> getTplAgeRangeStats() {

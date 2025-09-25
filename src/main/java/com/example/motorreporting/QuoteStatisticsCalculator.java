@@ -98,6 +98,10 @@ public final class QuoteStatisticsCalculator {
                 computeOutcomeBreakdown(tplRecords, QuoteRecord::getBodyCategoryLabel);
         Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecificationOutcomes =
                 computeOutcomeBreakdown(tplRecords, QuoteRecord::getOverrideSpecificationLabel);
+        Map<String, QuoteStatistics.OutcomeBreakdown> tplChineseOutcomes =
+                computeOutcomeBreakdown(tplRecords, QuoteRecord::getChineseClassificationLabel);
+        Map<String, QuoteStatistics.OutcomeBreakdown> tplElectricOutcomes =
+                computeOutcomeBreakdown(tplRecords, QuoteRecord::getElectricClassificationLabel);
         Map<String, QuoteStatistics.OutcomeBreakdown> compBodyCategoryOutcomes =
                 computeOutcomeBreakdown(compRecords, QuoteRecord::getBodyCategoryLabel);
         Map<String, QuoteStatistics.OutcomeBreakdown> compSpecificationOutcomes =
@@ -154,6 +158,8 @@ public final class QuoteStatisticsCalculator {
                 compUniqueChassisSummary.getFailureCount(),
                 tplBodyCategoryOutcomes,
                 tplSpecificationOutcomes,
+                tplChineseOutcomes,
+                tplElectricOutcomes,
                 compBodyCategoryOutcomes,
                 compSpecificationOutcomes,
                 tplAgeRangeStats,

@@ -482,6 +482,19 @@ public class HtmlReportGenerator {
         appendMakeModelTable(html, "Top 20 Make & Model by Unique Chassis (TPL)",
                 statistics.getTplTopRequestedMakeModelsByUniqueChassis());
         html.append("    <div class=\"charts\">\n");
+        html.append("      <h2 class=\"section-title\">Success Ratios by Nationality & Fuel Type</h2>\n");
+        html.append("      <div class=\"chart-grid\">\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Chinese vs Non-Chinese</h2>\n");
+        html.append("          <canvas id=\"tplChineseOutcomeChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("        <div class=\"chart-card\">\n");
+        html.append("          <h2>Electric vs Non-Electric</h2>\n");
+        html.append("          <canvas id=\"tplElectricOutcomeChart\"></canvas>\n");
+        html.append("        </div>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card\">\n");
         html.append("        <h2>Success vs Failure Ratio by Age Range</h2>\n");
         html.append("        <canvas id=\"tplAgeRatioChart\"></canvas>\n");
@@ -1067,6 +1080,8 @@ public class HtmlReportGenerator {
         long compUniqueFailureCount = compUniqueRequests.getFailureCount();
 
         Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyOutcomes = statistics.getTplBodyCategoryOutcomes();
+        Map<String, QuoteStatistics.OutcomeBreakdown> tplChineseOutcomes = statistics.getTplChineseOutcomeBreakdown();
+        Map<String, QuoteStatistics.OutcomeBreakdown> tplElectricOutcomes = statistics.getTplElectricOutcomeBreakdown();
         Map<String, QuoteStatistics.OutcomeBreakdown> compBodyOutcomes = statistics.getComprehensiveBodyCategoryOutcomes();
         List<QuoteStatistics.AgeRangeStats> tplAgeStats = statistics.getTplAgeRangeStats();
         List<QuoteStatistics.AgeRangeStats> compAgeStats = statistics.getComprehensiveAgeRangeStats();
@@ -1140,6 +1155,16 @@ public class HtmlReportGenerator {
                 compBodyFailureValues.add(breakdown.getFailureCount());
             }
         }
+
+        List<String> tplChineseLabels = new ArrayList<>();
+        List<Double> tplChineseSuccessRatios = new ArrayList<>();
+        List<Double> tplChineseFailureRatios = new ArrayList<>();
+        populateOutcomeRatioData(tplChineseOutcomes, tplChineseLabels, tplChineseSuccessRatios, tplChineseFailureRatios);
+
+        List<String> tplElectricLabels = new ArrayList<>();
+        List<Double> tplElectricSuccessRatios = new ArrayList<>();
+        List<Double> tplElectricFailureRatios = new ArrayList<>();
+        populateOutcomeRatioData(tplElectricOutcomes, tplElectricLabels, tplElectricSuccessRatios, tplElectricFailureRatios);
 
         List<String> tplAgeLabels = new ArrayList<>();
         List<Double> tplAgeSuccessRatios = new ArrayList<>();
@@ -1299,6 +1324,18 @@ public class HtmlReportGenerator {
         script.append("    interaction: { mode: 'index', intersect: false },\n");
         script.append("    scales: { y: { beginAtZero: true, max: 100, ticks: { callback: value => `${value}%` } } },\n");
         script.append("    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } } }\n");
+        script.append("  };\n");
+        script.append("  const stackedRatioOptions = {\n");
+        script.append("    responsive: true,\n");
+        script.append("    interaction: { mode: 'index', intersect: false },\n");
+        script.append("    scales: {\n");
+        script.append("      x: { stacked: true },\n");
+        script.append("      y: { beginAtZero: true, max: 100, stacked: true, ticks: { callback: value => `${value}%` } }\n");
+        script.append("    },\n");
+        script.append("    plugins: {\n");
+        script.append("      legend: { display: true, position: 'bottom', labels: { usePointStyle: true } },\n");
+        script.append("      tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toFixed(1)}%` } }\n");
+        script.append("    }\n");
         script.append("  };\n");
         script.append("  const trendLineOptions = {\n");
         script.append("    responsive: true,\n");
@@ -1631,6 +1668,44 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
+        script.append("  const tplChineseOutcomeData = {\n");
+        script.append("    labels: ").append(toJsStringArray(tplChineseLabels)).append(",\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Success %',\n");
+        script.append("        data: ").append(toJsDoubleArray(tplChineseSuccessRatios)).append(",\n");
+        script.append("        backgroundColor: 'rgba(22, 163, 74, 0.85)',\n");
+        script.append("        stack: 'ratio',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Failure %',\n");
+        script.append("        data: ").append(toJsDoubleArray(tplChineseFailureRatios)).append(",\n");
+        script.append("        backgroundColor: 'rgba(220, 38, 38, 0.8)',\n");
+        script.append("        stack: 'ratio',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
+        script.append("  const tplElectricOutcomeData = {\n");
+        script.append("    labels: ").append(toJsStringArray(tplElectricLabels)).append(",\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        label: 'Success %',\n");
+        script.append("        data: ").append(toJsDoubleArray(tplElectricSuccessRatios)).append(",\n");
+        script.append("        backgroundColor: 'rgba(14, 116, 144, 0.85)',\n");
+        script.append("        stack: 'ratio',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        label: 'Failure %',\n");
+        script.append("        data: ").append(toJsDoubleArray(tplElectricFailureRatios)).append(",\n");
+        script.append("        backgroundColor: 'rgba(234, 179, 8, 0.85)',\n");
+        script.append("        stack: 'ratio',\n");
+        script.append("        borderRadius: 8\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
         script.append("  const tplAgeRatioData = {\n");
         script.append("    labels: ").append(toJsStringArray(tplAgeLabels)).append(",\n");
         script.append("    datasets: [\n");
@@ -1706,6 +1781,8 @@ public class HtmlReportGenerator {
         script.append("  registerConversionToggle('tplSalesAge', tplSalesAgeChart);\n");
         script.append("  registerConversionToggle('compSalesBody', compSalesBodyChart);\n");
         script.append("  registerConversionToggle('compSalesAge', compSalesAgeChart);\n");
+        script.append("  new Chart(document.getElementById('tplChineseOutcomeChart'), { type: 'bar', data: tplChineseOutcomeData, options: stackedRatioOptions });\n");
+        script.append("  new Chart(document.getElementById('tplElectricOutcomeChart'), { type: 'bar', data: tplElectricOutcomeData, options: stackedRatioOptions });\n");
         script.append("  new Chart(document.getElementById('tplOutcomesChart'), { type: 'bar', data: tplData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compOutcomesChart'), { type: 'bar', data: compData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('overallSpecUniqueChart'), { type: 'bar', data: overallSpecificationData, options: sharedOptions });\n");
@@ -1776,6 +1853,27 @@ public class HtmlReportGenerator {
         script.append("  });\n");
         script.append("</script>\n");
         return script.toString();
+    }
+
+    private void populateOutcomeRatioData(Map<String, QuoteStatistics.OutcomeBreakdown> outcomes,
+                                          List<String> labels,
+                                          List<Double> successRatios,
+                                          List<Double> failureRatios) {
+        if (outcomes.isEmpty()) {
+            labels.add("No Data");
+            successRatios.add(0.0);
+            failureRatios.add(0.0);
+            return;
+        }
+        for (Map.Entry<String, QuoteStatistics.OutcomeBreakdown> entry : outcomes.entrySet()) {
+            QuoteStatistics.OutcomeBreakdown breakdown = entry.getValue();
+            long total = breakdown.getProcessedTotal();
+            double successRatio = total == 0 ? 0.0 : (breakdown.getSuccessCount() * 100.0) / total;
+            double failureRatio = total == 0 ? 0.0 : (breakdown.getFailureCount() * 100.0) / total;
+            labels.add(entry.getKey());
+            successRatios.add(successRatio);
+            failureRatios.add(failureRatio);
+        }
     }
 
     private void populateSalesChartData(List<QuoteStatistics.SalesConversionStats> stats,
