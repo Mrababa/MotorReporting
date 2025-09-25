@@ -45,6 +45,12 @@ public class QuoteStatistics {
     private final List<SalesConversionStats> tplSalesByAgeRange;
     private final List<SalesConversionStats> tplSalesByChineseClassification;
     private final List<SalesConversionStats> tplSalesByFuelType;
+    private final long tplPoliciesSold;
+    private final BigDecimal tplTotalPremium;
+    private final List<SalesPremiumBreakdown> tplBodyTypePremiums;
+    private final List<MakeModelPremiumSummary> tplTopModelsByPremium;
+    private final double tplChineseSalesRatio;
+    private final double tplElectricSalesRatio;
     private final List<SalesConversionStats> comprehensiveSalesByBodyType;
     private final List<SalesConversionStats> comprehensiveSalesByAgeRange;
     private final List<SalesConversionStats> comprehensiveSalesByChineseClassification;
@@ -97,6 +103,12 @@ public class QuoteStatistics {
                            List<SalesConversionStats> tplSalesByAgeRange,
                            List<SalesConversionStats> tplSalesByChineseClassification,
                            List<SalesConversionStats> tplSalesByFuelType,
+                           long tplPoliciesSold,
+                           BigDecimal tplTotalPremium,
+                           List<SalesPremiumBreakdown> tplBodyTypePremiums,
+                           List<MakeModelPremiumSummary> tplTopModelsByPremium,
+                           double tplChineseSalesRatio,
+                           double tplElectricSalesRatio,
                            List<SalesConversionStats> comprehensiveSalesByBodyType,
                            List<SalesConversionStats> comprehensiveSalesByAgeRange,
                            List<SalesConversionStats> comprehensiveSalesByChineseClassification,
@@ -148,6 +160,13 @@ public class QuoteStatistics {
         this.tplSalesByAgeRange = immutableCopy(tplSalesByAgeRange);
         this.tplSalesByChineseClassification = immutableCopy(tplSalesByChineseClassification);
         this.tplSalesByFuelType = immutableCopy(tplSalesByFuelType);
+        this.tplPoliciesSold = tplPoliciesSold;
+        BigDecimal safeTplTotalPremium = tplTotalPremium == null ? BigDecimal.ZERO : tplTotalPremium;
+        this.tplTotalPremium = safeTplTotalPremium.setScale(2, RoundingMode.HALF_UP);
+        this.tplBodyTypePremiums = immutableCopy(tplBodyTypePremiums);
+        this.tplTopModelsByPremium = immutableCopy(tplTopModelsByPremium);
+        this.tplChineseSalesRatio = tplChineseSalesRatio;
+        this.tplElectricSalesRatio = tplElectricSalesRatio;
         this.comprehensiveSalesByBodyType = immutableCopy(comprehensiveSalesByBodyType);
         this.comprehensiveSalesByAgeRange = immutableCopy(comprehensiveSalesByAgeRange);
         this.comprehensiveSalesByChineseClassification =
@@ -325,6 +344,30 @@ public class QuoteStatistics {
 
     public List<SalesConversionStats> getTplSalesByFuelType() {
         return tplSalesByFuelType;
+    }
+
+    public long getTplPoliciesSold() {
+        return tplPoliciesSold;
+    }
+
+    public BigDecimal getTplTotalPremium() {
+        return tplTotalPremium;
+    }
+
+    public List<SalesPremiumBreakdown> getTplBodyTypePremiums() {
+        return tplBodyTypePremiums;
+    }
+
+    public List<MakeModelPremiumSummary> getTplTopModelsByPremium() {
+        return tplTopModelsByPremium;
+    }
+
+    public double getTplChineseSalesRatio() {
+        return tplChineseSalesRatio;
+    }
+
+    public double getTplElectricSalesRatio() {
+        return tplElectricSalesRatio;
     }
 
     public List<SalesConversionStats> getComprehensiveSalesByBodyType() {

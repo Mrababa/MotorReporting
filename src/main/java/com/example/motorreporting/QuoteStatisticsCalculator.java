@@ -128,6 +128,16 @@ public final class QuoteStatisticsCalculator {
                 computeSalesConversionByClassifier(tplRecords, QuoteRecord::getChineseClassificationLabel);
         List<QuoteStatistics.SalesConversionStats> tplSalesByFuelType =
                 computeSalesConversionByClassifier(tplRecords, QuoteRecord::getElectricClassificationLabel);
+        List<QuoteStatistics.SalesPremiumBreakdown> tplBodyPremiumBreakdowns =
+                computePremiumBreakdownByBodyType(tplRecords);
+        BigDecimal tplTotalPremium = tplBodyPremiumBreakdowns.stream()
+                .map(QuoteStatistics.SalesPremiumBreakdown::getTotalPremium)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        long tplPoliciesSold = tplBodyPremiumBreakdowns.stream()
+                .mapToLong(QuoteStatistics.SalesPremiumBreakdown::getSoldPolicies)
+                .sum();
+        List<QuoteStatistics.MakeModelPremiumSummary> tplTopModelsByPremium =
+                computeTopModelsByPremium(tplRecords, TOP_PREMIUM_MODEL_LIMIT);
         List<QuoteStatistics.SalesConversionStats> compSalesByBodyType =
                 computeSalesConversionByBodyType(compRecords);
         List<QuoteStatistics.SalesConversionStats> compSalesByAgeRange =
@@ -146,6 +156,8 @@ public final class QuoteStatisticsCalculator {
                 .sum();
         List<QuoteStatistics.MakeModelPremiumSummary> compTopModelsByPremium =
                 computeTopModelsByPremium(compRecords, TOP_PREMIUM_MODEL_LIMIT);
+        double tplChineseSalesRatio = findConversionRatio(tplSalesByChineseClassification, CHINESE_LABEL);
+        double tplElectricSalesRatio = findConversionRatio(tplSalesByFuelType, ELECTRIC_LABEL);
         double compChineseSalesRatio = findConversionRatio(compSalesByChineseClassification, CHINESE_LABEL);
         double compElectricSalesRatio = findConversionRatio(compSalesByFuelType, ELECTRIC_LABEL);
         Map<String, Long> tplErrorCounts = computeErrorCounts(tplRecords, false);
@@ -198,6 +210,12 @@ public final class QuoteStatisticsCalculator {
                 tplSalesByAgeRange,
                 tplSalesByChineseClassification,
                 tplSalesByFuelType,
+                tplPoliciesSold,
+                tplTotalPremium,
+                tplBodyPremiumBreakdowns,
+                tplTopModelsByPremium,
+                tplChineseSalesRatio,
+                tplElectricSalesRatio,
                 compSalesByBodyType,
                 compSalesByAgeRange,
                 compSalesByChineseClassification,
