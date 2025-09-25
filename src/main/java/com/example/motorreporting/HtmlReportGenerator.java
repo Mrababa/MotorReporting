@@ -60,6 +60,13 @@ public class HtmlReportGenerator {
         Files.writeString(outputPath, html, StandardCharsets.UTF_8);
     }
 
+    public void generate(Path outputPath,
+                         QuoteStatistics statistics,
+                         List<QuoteRecord> records) throws IOException {
+        generate(outputPath, statistics, records,
+                ReportDateRange.of(Optional.empty(), Optional.empty()));
+    }
+
     private String buildHtml(QuoteStatistics statistics,
                              List<QuoteRecord> records,
                              ReportDateRange reportDateRange) {

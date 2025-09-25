@@ -497,7 +497,8 @@ public final class QuoteStatisticsCalculator {
 
         return countsByLabel.entrySet().stream()
                 .sorted(Comparator
-                        .comparingInt(entry -> yearOrderKey(entry.getKey()))
+                        .comparingInt((Map.Entry<String, TrendCounter> entry) ->
+                                yearOrderKey(entry.getKey()))
                         .thenComparing(Map.Entry::getKey))
                 .map(entry -> new QuoteStatistics.TrendPoint(entry.getKey(),
                         entry.getValue().getTotal(), entry.getValue().getFailed()))
@@ -529,7 +530,8 @@ public final class QuoteStatisticsCalculator {
 
         return countsByLabel.entrySet().stream()
                 .sorted(Comparator
-                        .comparingInt(entry -> ageOrderKey(entry.getKey()))
+                        .comparingInt((Map.Entry<String, TrendCounter> entry) ->
+                                ageOrderKey(entry.getKey()))
                         .thenComparing(Map.Entry::getKey))
                 .map(entry -> new QuoteStatistics.TrendPoint(entry.getKey(),
                         entry.getValue().getTotal(), entry.getValue().getFailed()))

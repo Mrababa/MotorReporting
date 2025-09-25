@@ -18,6 +18,14 @@ public final class QuoteReportGenerator {
 
     private static final String DEFAULT_SOURCE_DIRECTORY = "source data";
 
+    private static Path resolveSourceDataDirectory() {
+        String userDir = System.getProperty("user.dir");
+        Path basePath = userDir == null || userDir.isBlank()
+                ? Paths.get(".")
+                : Paths.get(userDir);
+        return basePath.resolve(DEFAULT_SOURCE_DIRECTORY);
+    }
+
     private QuoteReportGenerator() {
     }
 
@@ -58,7 +66,7 @@ public final class QuoteReportGenerator {
             if (Files.exists(provided)) {
                 return provided;
             }
-            Path fromSourceDirectory = Paths.get(DEFAULT_SOURCE_DIRECTORY).resolve(fileName);
+            Path fromSourceDirectory = resolveSourceDataDirectory().resolve(fileName);
             if (Files.exists(fromSourceDirectory)) {
                 return fromSourceDirectory;
             }
@@ -112,7 +120,7 @@ public final class QuoteReportGenerator {
     }
 
     private static Path findSingleFileInSourceDirectory() throws IOException {
-        Path sourceDirectory = Paths.get(DEFAULT_SOURCE_DIRECTORY);
+        Path sourceDirectory = resolveSourceDataDirectory();
         if (!Files.isDirectory(sourceDirectory)) {
             throw new IllegalArgumentException("Source data directory not found: "
                     + sourceDirectory.toAbsolutePath());

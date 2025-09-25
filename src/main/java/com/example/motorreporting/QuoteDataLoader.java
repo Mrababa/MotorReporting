@@ -391,15 +391,20 @@ public final class QuoteDataLoader {
     }
 
     private static boolean isSeparatorDirective(String[] row) {
-        if (row.length != 1) {
+        if (row == null || row.length == 0) {
             return false;
         }
-        String value = row[0];
-        if (value == null) {
-            return false;
+        for (String value : row) {
+            if (value == null) {
+                continue;
+            }
+            String trimmed = stripBom(value).trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            return trimmed.regionMatches(true, 0, "sep=", 0, 4);
         }
-        String trimmed = stripBom(value).trim();
-        return trimmed.regionMatches(true, 0, "sep=", 0, 4);
+        return false;
     }
 
     private static List<Charset> buildCsvCharsetCandidates(Path filePath) throws IOException {
