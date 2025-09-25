@@ -46,6 +46,7 @@ public class QuoteStatistics {
     private final List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> comprehensiveTopRequestedMakeModelsByUniqueChassis;
+    private final List<MakeModelChassisSummary> comprehensiveTopRejectedModelsByUniqueChassis;
     private final Map<String, Long> tplErrorCounts;
     private final Map<String, Long> comprehensiveErrorCounts;
     private final List<CategoryCount> uniqueChassisBySpecification;
@@ -84,6 +85,7 @@ public class QuoteStatistics {
                            List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis,
                            List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis,
                            List<MakeModelChassisSummary> comprehensiveTopRequestedMakeModelsByUniqueChassis,
+                           List<MakeModelChassisSummary> comprehensiveTopRejectedModelsByUniqueChassis,
                            Map<String, Long> tplErrorCounts,
                            Map<String, Long> comprehensiveErrorCounts,
                            List<CategoryCount> uniqueChassisBySpecification,
@@ -122,6 +124,8 @@ public class QuoteStatistics {
         this.tplTopRequestedMakeModelsByUniqueChassis = immutableCopy(tplTopRequestedMakeModelsByUniqueChassis);
         this.comprehensiveTopRequestedMakeModelsByUniqueChassis =
                 immutableCopy(comprehensiveTopRequestedMakeModelsByUniqueChassis);
+        this.comprehensiveTopRejectedModelsByUniqueChassis =
+                immutableCopy(comprehensiveTopRejectedModelsByUniqueChassis);
         this.tplErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(tplErrorCounts));
         this.comprehensiveErrorCounts = Collections.unmodifiableMap(new LinkedHashMap<>(comprehensiveErrorCounts));
         this.uniqueChassisBySpecification = immutableCopy(uniqueChassisBySpecification);
@@ -233,6 +237,10 @@ public class QuoteStatistics {
 
     public List<MakeModelChassisSummary> getComprehensiveTopRequestedMakeModelsByUniqueChassis() {
         return comprehensiveTopRequestedMakeModelsByUniqueChassis;
+    }
+
+    public List<MakeModelChassisSummary> getComprehensiveTopRejectedModelsByUniqueChassis() {
+        return comprehensiveTopRejectedModelsByUniqueChassis;
     }
 
     public Map<String, Long> getTplErrorCounts() {
