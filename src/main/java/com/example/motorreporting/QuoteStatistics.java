@@ -38,6 +38,10 @@ public class QuoteStatistics {
     private final List<ManufactureYearStats> tplManufactureYearStats;
     private final List<ManufactureYearStats> comprehensiveManufactureYearStats;
     private final List<ValueRangeStats> comprehensiveEstimatedValueStats;
+    private final List<SalesConversionStats> tplSalesByBodyType;
+    private final List<SalesConversionStats> tplSalesByAgeRange;
+    private final List<SalesConversionStats> comprehensiveSalesByBodyType;
+    private final List<SalesConversionStats> comprehensiveSalesByAgeRange;
     private final List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis;
@@ -72,6 +76,10 @@ public class QuoteStatistics {
                            List<ManufactureYearStats> tplManufactureYearStats,
                            List<ManufactureYearStats> comprehensiveManufactureYearStats,
                            List<ValueRangeStats> comprehensiveEstimatedValueStats,
+                           List<SalesConversionStats> tplSalesByBodyType,
+                           List<SalesConversionStats> tplSalesByAgeRange,
+                           List<SalesConversionStats> comprehensiveSalesByBodyType,
+                           List<SalesConversionStats> comprehensiveSalesByAgeRange,
                            List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis,
                            List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis,
                            List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis,
@@ -105,6 +113,10 @@ public class QuoteStatistics {
         this.tplManufactureYearStats = immutableCopy(tplManufactureYearStats);
         this.comprehensiveManufactureYearStats = immutableCopy(comprehensiveManufactureYearStats);
         this.comprehensiveEstimatedValueStats = immutableCopy(comprehensiveEstimatedValueStats);
+        this.tplSalesByBodyType = immutableCopy(tplSalesByBodyType);
+        this.tplSalesByAgeRange = immutableCopy(tplSalesByAgeRange);
+        this.comprehensiveSalesByBodyType = immutableCopy(comprehensiveSalesByBodyType);
+        this.comprehensiveSalesByAgeRange = immutableCopy(comprehensiveSalesByAgeRange);
         this.tplTopRejectedModelsByUniqueChassis = immutableCopy(tplTopRejectedModelsByUniqueChassis);
         this.topRequestedMakeModelsByUniqueChassis = immutableCopy(topRequestedMakeModelsByUniqueChassis);
         this.tplTopRequestedMakeModelsByUniqueChassis = immutableCopy(tplTopRequestedMakeModelsByUniqueChassis);
@@ -237,6 +249,22 @@ public class QuoteStatistics {
 
     public List<AgeRangeStats> getComprehensiveAgeRangeStats() {
         return comprehensiveAgeRangeStats;
+    }
+
+    public List<SalesConversionStats> getTplSalesByBodyType() {
+        return tplSalesByBodyType;
+    }
+
+    public List<SalesConversionStats> getTplSalesByAgeRange() {
+        return tplSalesByAgeRange;
+    }
+
+    public List<SalesConversionStats> getComprehensiveSalesByBodyType() {
+        return comprehensiveSalesByBodyType;
+    }
+
+    public List<SalesConversionStats> getComprehensiveSalesByAgeRange() {
+        return comprehensiveSalesByAgeRange;
     }
 
     public List<ValueRangeStats> getComprehensiveEstimatedValueStats() {
@@ -509,6 +537,57 @@ public class QuoteStatistics {
 
         public long getFailureCount() {
             return failureCount;
+        }
+    }
+
+    public static final class SalesConversionStats {
+        private final String label;
+        private final long totalRequests;
+        private final long successfulQuotes;
+        private final long soldPolicies;
+
+        public SalesConversionStats(String label,
+                                    long totalRequests,
+                                    long successfulQuotes,
+                                    long soldPolicies) {
+            this.label = Objects.requireNonNull(label, "label");
+            this.totalRequests = totalRequests;
+            this.successfulQuotes = successfulQuotes;
+            this.soldPolicies = soldPolicies;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public long getTotalRequests() {
+            return totalRequests;
+        }
+
+        public long getSuccessfulQuotes() {
+            return successfulQuotes;
+        }
+
+        public long getSoldPolicies() {
+            return soldPolicies;
+        }
+
+        public double getOverallConversionRatio() {
+            if (totalRequests == 0) {
+                return 0.0;
+            }
+            return soldPolicies / (double) totalRequests;
+        }
+
+        public double getQuoteConversionRatio() {
+            if (successfulQuotes == 0) {
+                return 0.0;
+            }
+            return soldPolicies / (double) successfulQuotes;
+        }
+
+        public boolean hasData() {
+            return totalRequests > 0 || successfulQuotes > 0 || soldPolicies > 0;
         }
     }
 

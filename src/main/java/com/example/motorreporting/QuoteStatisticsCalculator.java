@@ -33,6 +33,7 @@ public final class QuoteStatisticsCalculator {
     private static final String SPEC_LABEL_GCC = "GCC";
     private static final String SPEC_LABEL_NON_GCC = "Non GCC";
     private static final String SPEC_LABEL_UNKNOWN = "Unknown";
+    private static final String NO_DATA_LABEL = "No Data";
 
     private static String normalizeChassisNumber(String value) {
         if (value == null) {
@@ -108,6 +109,14 @@ public final class QuoteStatisticsCalculator {
                 computeManufactureYearStats(compRecords);
         List<QuoteStatistics.ValueRangeStats> compEstimatedValueStats =
                 computeEstimatedValueRangeStats(compRecords);
+        List<QuoteStatistics.SalesConversionStats> tplSalesByBodyType =
+                computeSalesConversionByBodyType(tplRecords);
+        List<QuoteStatistics.SalesConversionStats> tplSalesByAgeRange =
+                computeSalesConversionByAgeRange(tplRecords);
+        List<QuoteStatistics.SalesConversionStats> compSalesByBodyType =
+                computeSalesConversionByBodyType(compRecords);
+        List<QuoteStatistics.SalesConversionStats> compSalesByAgeRange =
+                computeSalesConversionByAgeRange(compRecords);
         Map<String, Long> tplErrorCounts = computeErrorCounts(tplRecords, false);
         Map<String, Long> compErrorCounts = computeErrorCounts(compRecords, true);
         List<QuoteStatistics.ModelChassisSummary> tplTopRejectedModels =
@@ -149,6 +158,10 @@ public final class QuoteStatisticsCalculator {
                 tplManufactureYearStats,
                 compManufactureYearStats,
                 compEstimatedValueStats,
+                tplSalesByBodyType,
+                tplSalesByAgeRange,
+                compSalesByBodyType,
+                compSalesByAgeRange,
                 tplTopRejectedModels,
                 topRequestedMakeModels,
                 tplTopRequestedMakeModels,
@@ -646,6 +659,74 @@ public final class QuoteStatisticsCalculator {
         return results;
     }
 
+    private static List<QuoteStatistics.SalesConversionStats> computeSalesConversionByBodyType(List<QuoteRecord> records) {
+        Map<String, SalesAccumulator> accumulatorByBodyType = new LinkedHashMap<>();
+        for (QuoteRecord record : records) {
+            String label = record.getBodyCategoryLabel();
+            SalesAccumulator accumulator = accumulatorByBodyType.computeIfAbsent(label,
+                    ignored -> new SalesAccumulator());
+            recordSales(accumulator, record);
+        }
+
+        List<Map.Entry<String, SalesAccumulator>> ordered = new ArrayList<>(accumulatorByBodyType.entrySet());
+        ordered.sort(Comparator.<Map.Entry<String, SalesAccumulator>>comparingLong(
+                        entry -> entry.getValue().getTotalRequests())
+                .reversed()
+                .thenComparing(Map.Entry::getKey));
+
+        List<QuoteStatistics.SalesConversionStats> results = new ArrayList<>();
+        for (Map.Entry<String, SalesAccumulator> entry : ordered) {
+            QuoteStatistics.SalesConversionStats stats = entry.getValue()
+                    .toSalesConversionStats(entry.getKey());
+            if (stats.hasData()) {
+                results.add(stats);
+            }
+        }
+
+        if (results.isEmpty()) {
+            results.add(new QuoteStatistics.SalesConversionStats(NO_DATA_LABEL, 0, 0, 0));
+        }
+        return results;
+    }
+
+    private static List<QuoteStatistics.SalesConversionStats> computeSalesConversionByAgeRange(List<QuoteRecord> records) {
+        Map<AgeRange, SalesAccumulator> accumulatorByRange = new LinkedHashMap<>();
+        for (AgeRange range : AGE_RANGES) {
+            accumulatorByRange.put(range, new SalesAccumulator());
+        }
+        SalesAccumulator otherAccumulator = new SalesAccumulator();
+
+        for (QuoteRecord record : records) {
+            SalesAccumulator accumulator = otherAccumulator;
+            Optional<Integer> ageOptional = record.getDriverAge();
+            if (ageOptional.isPresent()) {
+                AgeRange matchingRange = findAgeRange(ageOptional.get());
+                if (matchingRange != null) {
+                    accumulator = accumulatorByRange.get(matchingRange);
+                }
+            }
+            recordSales(accumulator, record);
+        }
+
+        List<QuoteStatistics.SalesConversionStats> results = new ArrayList<>();
+        for (AgeRange range : AGE_RANGES) {
+            SalesAccumulator accumulator = accumulatorByRange.get(range);
+            QuoteStatistics.SalesConversionStats stats = accumulator.toSalesConversionStats(range.getLabel());
+            if (stats.hasData()) {
+                results.add(stats);
+            }
+        }
+        QuoteStatistics.SalesConversionStats otherStats = otherAccumulator.toSalesConversionStats(OTHER_AGE_LABEL);
+        if (otherStats.hasData()) {
+            results.add(otherStats);
+        }
+
+        if (results.isEmpty()) {
+            results.add(new QuoteStatistics.SalesConversionStats(NO_DATA_LABEL, 0, 0, 0));
+        }
+        return results;
+    }
+
     private static List<QuoteStatistics.ManufactureYearStats> computeManufactureYearStats(List<QuoteRecord> records) {
         LinkedHashMap<String, OutcomeAccumulator> predefinedBuckets = new LinkedHashMap<>();
         OutcomeAccumulator before2000 = new OutcomeAccumulator();
@@ -701,6 +782,52 @@ public final class QuoteStatisticsCalculator {
             results.add(unknownBucket.toManufactureYearStats("Unknown"));
         }
         return results;
+    }
+
+    private static void recordSales(SalesAccumulator accumulator, QuoteRecord record) {
+        boolean processed = false;
+        if (record.isSuccessful()) {
+            accumulator.incrementTotal();
+            accumulator.incrementSuccessful();
+            processed = true;
+        } else if (record.isFailure()) {
+            accumulator.incrementTotal();
+            processed = true;
+        }
+
+        if (record.hasPolicyNumber()) {
+            accumulator.incrementSold();
+            if (!processed) {
+                accumulator.incrementTotal();
+                accumulator.incrementSuccessful();
+            }
+        }
+    }
+
+    private static final class SalesAccumulator {
+        private long totalRequests;
+        private long successfulQuotes;
+        private long soldPolicies;
+
+        private void incrementTotal() {
+            totalRequests++;
+        }
+
+        private void incrementSuccessful() {
+            successfulQuotes++;
+        }
+
+        private void incrementSold() {
+            soldPolicies++;
+        }
+
+        private long getTotalRequests() {
+            return totalRequests;
+        }
+
+        private QuoteStatistics.SalesConversionStats toSalesConversionStats(String label) {
+            return new QuoteStatistics.SalesConversionStats(label, totalRequests, successfulQuotes, soldPolicies);
+        }
     }
 
     private static final class UniqueChassisSummary {

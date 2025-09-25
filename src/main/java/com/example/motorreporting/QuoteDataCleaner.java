@@ -36,6 +36,7 @@ public final class QuoteDataCleaner {
             "ManufactureYear",
             "RegistrationDate",
             "QuotationNo",
+            "PolicyNumber",
             "EstimatedValue",
             "InsuranceExpiryDate",
             "ErrorText"
