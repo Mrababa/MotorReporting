@@ -25,6 +25,7 @@ public class QuoteRecord {
     private final String insuranceCompanyName;
     private final String errorText;
     private final String quoteNumber;
+    private final String policyNumber;
     private final Integer manufactureYear;
     private final BigDecimal estimatedValue;
     private final String chassisNumber;
@@ -52,6 +53,7 @@ public class QuoteRecord {
                         Integer manufactureYear,
                         BigDecimal estimatedValue,
                         String quoteNumber,
+                        String policyNumber,
                         String chassisNumber,
                         String eid,
                         QuoteOutcome outcome,
@@ -70,6 +72,7 @@ public class QuoteRecord {
         this.manufactureYear = manufactureYear;
         this.estimatedValue = estimatedValue;
         this.quoteNumber = quoteNumber;
+        this.policyNumber = policyNumber;
         this.chassisNumber = chassisNumber;
         this.eid = eid;
         this.outcome = Objects.requireNonNull(outcome, "outcome");
@@ -105,6 +108,7 @@ public class QuoteRecord {
         Integer manufactureYear = parseInteger(getValueIgnoreCase(normalized, "ManufactureYear"));
         BigDecimal estimatedValue = parseBigDecimal(getValueIgnoreCase(normalized, "EstimatedValue"));
         String quoteNumber = extractQuoteNumber(normalized);
+        String policyNumber = extractPolicyNumber(normalized);
         String chassisNumber = extractChassisNumber(normalized);
         String bodyCategory = normalizeCategoricalValue(getValueIgnoreCase(normalized, "BodyCategory"));
         String overrideSpec = normalizeCategoricalValue(getValueIgnoreCase(normalized, "OverrideIsGccSpec"));
@@ -115,7 +119,7 @@ public class QuoteRecord {
         LocalDateTime quoteRequestedOn = parseQuoteRequestedOn(getValueIgnoreCase(normalized, "QuoteRequestedOn"));
 
         return new QuoteRecord(normalized, insuranceType, status, insurancePurpose, insuranceCompanyName, errorText,
-                manufactureYear, estimatedValue, quoteNumber, chassisNumber, eid, outcome, bodyCategory, overrideSpec,
+                manufactureYear, estimatedValue, quoteNumber, policyNumber, chassisNumber, eid, outcome, bodyCategory, overrideSpec,
                 driverAge, model, make, quoteRequestedOn);
     }
 
@@ -220,6 +224,26 @@ public class QuoteRecord {
                 "QuoteNo",
                 "Quote #",
                 "Quotation #"
+        };
+        for (String key : possibleKeys) {
+            String value = getValueIgnoreCase(values, key);
+            if (!isNullLiteral(value)) {
+                return value.trim();
+            }
+        }
+        return null;
+    }
+
+    private static String extractPolicyNumber(Map<String, String> values) {
+        String[] possibleKeys = {
+                "PolicyNumber",
+                "PolicyNo",
+                "Policy #",
+                "Policy No",
+                "PolicyNo.",
+                "Policy",
+                "Policy Reference",
+                "PolicyRef"
         };
         for (String key : possibleKeys) {
             String value = getValueIgnoreCase(values, key);
@@ -445,6 +469,10 @@ public class QuoteRecord {
         return Optional.ofNullable(quoteNumber);
     }
 
+    public Optional<String> getPolicyNumber() {
+        return Optional.ofNullable(policyNumber);
+    }
+
     public Optional<String> getChassisNumber() {
         return Optional.ofNullable(chassisNumber);
     }
@@ -463,6 +491,10 @@ public class QuoteRecord {
 
     public boolean hasQuoteNumber() {
         return !isNullLiteral(quoteNumber);
+    }
+
+    public boolean hasPolicyNumber() {
+        return !isNullLiteral(policyNumber);
     }
 
     public boolean hasError() {

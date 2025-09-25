@@ -377,6 +377,8 @@ public class HtmlReportGenerator {
         html.append("    <button type=\"button\" class=\"nav-button active\" data-target=\"overview\">Overview</button>\n");
         html.append("    <button type=\"button\" class=\"nav-button\" data-target=\"tpl-analysis\">TPL Analysis</button>\n");
         html.append("    <button type=\"button\" class=\"nav-button\" data-target=\"comprehensive-analysis\">Comprehensive Analysis</button>\n");
+        html.append("    <button type=\"button\" class=\"nav-button\" data-target=\"tpl-sales\">TPL Sales</button>\n");
+        html.append("    <button type=\"button\" class=\"nav-button\" data-target=\"comprehensive-sales\">Comprehensive Sales</button>\n");
         html.append("  </nav>\n");
         html.append("  <section id=\"overview\" class=\"page-section active\">\n");
         html.append("    <div class=\"summary-grid\">\n");
@@ -554,6 +556,62 @@ public class HtmlReportGenerator {
         html.append("      </div>\n");
         html.append("    </div>\n");
         appendErrorTable(html, "Comprehensive Error Counts", statistics.getComprehensiveErrorCounts());
+        html.append("  </section>\n");
+        html.append("  <section id=\"tpl-sales\" class=\"page-section\">\n");
+        html.append("    <div class=\"summary-section\">\n");
+        html.append("      <h2 class=\"section-title\">TPL Sales Conversion</h2>\n");
+        html.append("      <p>Track how successful quotes translate into issued policies by customer segment.</p>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <div class=\"chart-card__header\">\n");
+        html.append("          <h2>Sales by Body Type</h2>\n");
+        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"tplSalesBody\">\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
+        html.append("          </div>\n");
+        html.append("        </div>\n");
+        html.append("        <canvas id=\"tplSalesBodyChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <div class=\"chart-card__header\">\n");
+        html.append("          <h2>Sales by Age Group</h2>\n");
+        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"tplSalesAge\">\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
+        html.append("          </div>\n");
+        html.append("        </div>\n");
+        html.append("        <canvas id=\"tplSalesAgeChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
+        html.append("  </section>\n");
+        html.append("  <section id=\"comprehensive-sales\" class=\"page-section\">\n");
+        html.append("    <div class=\"summary-section\">\n");
+        html.append("      <h2 class=\"section-title\">Comprehensive Sales Conversion</h2>\n");
+        html.append("      <p>Understand how comprehensive quotes convert into policies by key demographic groups.</p>\n");
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <div class=\"chart-card__header\">\n");
+        html.append("          <h2>Sales by Body Type</h2>\n");
+        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"compSalesBody\">\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
+        html.append("          </div>\n");
+        html.append("        </div>\n");
+        html.append("        <canvas id=\"compSalesBodyChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <div class=\"chart-card__header\">\n");
+        html.append("          <h2>Sales by Age Group</h2>\n");
+        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"compSalesAge\">\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
+        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
+        html.append("          </div>\n");
+        html.append("        </div>\n");
+        html.append("        <canvas id=\"compSalesAgeChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
         html.append("  </section>\n");
         html.append("</main>\n");
         html.append(buildScripts(statistics, tplSpecificationSummary, compSpecificationSummary));
@@ -1015,6 +1073,10 @@ public class HtmlReportGenerator {
         List<QuoteStatistics.ManufactureYearStats> compManufactureYearStats =
                 statistics.getComprehensiveManufactureYearStats();
         List<QuoteStatistics.ValueRangeStats> compValueStats = statistics.getComprehensiveEstimatedValueStats();
+        List<QuoteStatistics.SalesConversionStats> tplSalesByBody = statistics.getTplSalesByBodyType();
+        List<QuoteStatistics.SalesConversionStats> tplSalesByAge = statistics.getTplSalesByAgeRange();
+        List<QuoteStatistics.SalesConversionStats> compSalesByBody = statistics.getComprehensiveSalesByBodyType();
+        List<QuoteStatistics.SalesConversionStats> compSalesByAge = statistics.getComprehensiveSalesByAgeRange();
         List<QuoteStatistics.TrendPoint> overallManufactureYearTrend = statistics.getManufactureYearTrend();
         List<QuoteStatistics.TrendPoint> overallCustomerAgeTrend = statistics.getCustomerAgeTrend();
 
@@ -1125,6 +1187,34 @@ public class HtmlReportGenerator {
             compValueSuccessRatios.add(0.0);
             compValueFailureRatios.add(0.0);
         }
+
+        List<String> tplSalesBodyLabels = new ArrayList<>();
+        List<Long> tplSalesBodyTotals = new ArrayList<>();
+        List<Long> tplSalesBodySuccessCounts = new ArrayList<>();
+        List<Long> tplSalesBodySoldCounts = new ArrayList<>();
+        populateSalesChartData(tplSalesByBody, tplSalesBodyLabels, tplSalesBodyTotals,
+                tplSalesBodySuccessCounts, tplSalesBodySoldCounts);
+
+        List<String> tplSalesAgeLabels = new ArrayList<>();
+        List<Long> tplSalesAgeTotals = new ArrayList<>();
+        List<Long> tplSalesAgeSuccessCounts = new ArrayList<>();
+        List<Long> tplSalesAgeSoldCounts = new ArrayList<>();
+        populateSalesChartData(tplSalesByAge, tplSalesAgeLabels, tplSalesAgeTotals,
+                tplSalesAgeSuccessCounts, tplSalesAgeSoldCounts);
+
+        List<String> compSalesBodyLabels = new ArrayList<>();
+        List<Long> compSalesBodyTotals = new ArrayList<>();
+        List<Long> compSalesBodySuccessCounts = new ArrayList<>();
+        List<Long> compSalesBodySoldCounts = new ArrayList<>();
+        populateSalesChartData(compSalesByBody, compSalesBodyLabels, compSalesBodyTotals,
+                compSalesBodySuccessCounts, compSalesBodySoldCounts);
+
+        List<String> compSalesAgeLabels = new ArrayList<>();
+        List<Long> compSalesAgeTotals = new ArrayList<>();
+        List<Long> compSalesAgeSuccessCounts = new ArrayList<>();
+        List<Long> compSalesAgeSoldCounts = new ArrayList<>();
+        populateSalesChartData(compSalesByAge, compSalesAgeLabels, compSalesAgeTotals,
+                compSalesAgeSuccessCounts, compSalesAgeSoldCounts);
 
         List<String> tplManufactureYearLabels = new ArrayList<>();
         List<Double> tplManufactureYearSuccessRatios = new ArrayList<>();
@@ -1237,6 +1327,104 @@ public class HtmlReportGenerator {
         script.append("      });\n");
         script.append("    });\n");
         script.append("  };\n");
+        script.append("  const buildSalesStats = (labels, totals, successes, solds) => labels.map((label, index) => ({\n");
+        script.append("    label,\n");
+        script.append("    totalRequests: totals[index] == null ? 0 : totals[index],\n");
+        script.append("    successfulQuotes: successes[index] == null ? 0 : successes[index],\n");
+        script.append("    soldPolicies: solds[index] == null ? 0 : solds[index]\n");
+        script.append("  }));\n");
+        script.append("  const numberFormatter = new Intl.NumberFormat('en-US');\n");
+        script.append("  const conversionState = {};\n");
+        script.append("  const computeConversion = (stat, mode) => {\n");
+        script.append("    const denominator = mode === 'quote' ? stat.successfulQuotes : stat.totalRequests;\n");
+        script.append("    if (!denominator) {\n");
+        script.append("      return 0;\n");
+        script.append("    }\n");
+        script.append("    return (stat.soldPolicies / denominator) * 100;\n");
+        script.append("  };\n");
+        script.append("  const createSalesTooltipCallbacks = (stats, toggleId) => ({\n");
+        script.append("    label: ctx => `${ctx.dataset.label}: ${numberFormatter.format(ctx.raw == null ? 0 : ctx.raw)}`,\n");
+        script.append("    afterBody: items => {\n");
+        script.append("      if (!items.length) {\n");
+        script.append("        return [];\n");
+        script.append("      }\n");
+        script.append("      const index = items[0].dataIndex;\n");
+        script.append("      const stat = stats[index];\n");
+        script.append("      const mode = conversionState[toggleId] || 'overall';\n");
+        script.append("      const ratio = computeConversion(stat, mode);\n");
+        script.append("      const modeLabel = mode === 'quote' ? 'Quote Conversion' : 'Overall Conversion';\n");
+        script.append("      return [\n");
+        script.append("        `${modeLabel}: ${ratio.toFixed(1)}%`,\n");
+        script.append("        `Total Requests: ${numberFormatter.format(stat.totalRequests)}`\n");
+        script.append("      ];\n");
+        script.append("    }\n");
+        script.append("  });\n");
+        script.append("  const createSalesChart = (canvasId, stats, toggleId) => {\n");
+        script.append("    const canvas = document.getElementById(canvasId);\n");
+        script.append("    if (!canvas) {\n");
+        script.append("      return null;\n");
+        script.append("    }\n");
+        script.append("    return new Chart(canvas, {\n");
+        script.append("      type: 'bar',\n");
+        script.append("      data: {\n");
+        script.append("        labels: stats.map(stat => stat.label),\n");
+        script.append("        datasets: [\n");
+        script.append("          {\n");
+        script.append("            label: 'Successful Quotes',\n");
+        script.append("            data: stats.map(stat => stat.successfulQuotes),\n");
+        script.append("            backgroundColor: '#2563eb',\n");
+        script.append("            borderRadius: 8\n");
+        script.append("          },\n");
+        script.append("          {\n");
+        script.append("            label: 'Sold Policies',\n");
+        script.append("            data: stats.map(stat => stat.soldPolicies),\n");
+        script.append("            backgroundColor: '#16a34a',\n");
+        script.append("            borderRadius: 8\n");
+        script.append("          }\n");
+        script.append("        ]\n");
+        script.append("      },\n");
+        script.append("      options: {\n");
+        script.append("        ...sharedOptions,\n");
+        script.append("        interaction: { mode: 'index', intersect: false },\n");
+        script.append("        plugins: {\n");
+        script.append("          ...sharedOptions.plugins,\n");
+        script.append("          legend: { display: true, position: 'bottom', labels: { usePointStyle: true } },\n");
+        script.append("          tooltip: createSalesTooltipCallbacks(stats, toggleId)\n");
+        script.append("        }\n");
+        script.append("      }\n");
+        script.append("    });\n");
+        script.append("  };\n");
+        script.append("  const registerConversionToggle = (toggleId, chart) => {\n");
+        script.append("    if (!chart) {\n");
+        script.append("      return;\n");
+        script.append("    }\n");
+        script.append("    const toggle = document.querySelector(`[data-conversion-toggle='${toggleId}']`);\n");
+        script.append("    if (!toggle) {\n");
+        script.append("      return;\n");
+        script.append("    }\n");
+        script.append("    const buttons = Array.from(toggle.querySelectorAll('button[data-mode]'));\n");
+        script.append("    if (!buttons.length) {\n");
+        script.append("      return;\n");
+        script.append("    }\n");
+        script.append("    const setActive = button => {\n");
+        script.append("      const mode = button.getAttribute('data-mode') || 'overall';\n");
+        script.append("      conversionState[toggleId] = mode;\n");
+        script.append("      buttons.forEach(btn => btn.classList.toggle('active', btn === button));\n");
+        script.append("      chart.update();\n");
+        script.append("    };\n");
+        script.append("    const initial = buttons.find(btn => btn.classList.contains('active')) || buttons[0];\n");
+        script.append("    if (initial) {\n");
+        script.append("      setActive(initial);\n");
+        script.append("    }\n");
+        script.append("    buttons.forEach(button => {\n");
+        script.append("      button.addEventListener('click', () => {\n");
+        script.append("        if (button.classList.contains('active')) {\n");
+        script.append("          return;\n");
+        script.append("        }\n");
+        script.append("        setActive(button);\n");
+        script.append("      });\n");
+        script.append("    });\n");
+        script.append("  };\n");
         script.append("  const tplData = {\n");
         script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
@@ -1309,6 +1497,22 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
+        script.append("  const tplSalesBodyLabels = ").append(toJsStringArray(tplSalesBodyLabels)).append(";\n");
+        script.append("  const tplSalesBodyTotals = ").append(toJsNumberArray(tplSalesBodyTotals)).append(";\n");
+        script.append("  const tplSalesBodySuccessCounts = ").append(toJsNumberArray(tplSalesBodySuccessCounts)).append(";\n");
+        script.append("  const tplSalesBodySoldCounts = ").append(toJsNumberArray(tplSalesBodySoldCounts)).append(";\n");
+        script.append("  const tplSalesAgeLabels = ").append(toJsStringArray(tplSalesAgeLabels)).append(";\n");
+        script.append("  const tplSalesAgeTotals = ").append(toJsNumberArray(tplSalesAgeTotals)).append(";\n");
+        script.append("  const tplSalesAgeSuccessCounts = ").append(toJsNumberArray(tplSalesAgeSuccessCounts)).append(";\n");
+        script.append("  const tplSalesAgeSoldCounts = ").append(toJsNumberArray(tplSalesAgeSoldCounts)).append(";\n");
+        script.append("  const compSalesBodyLabels = ").append(toJsStringArray(compSalesBodyLabels)).append(";\n");
+        script.append("  const compSalesBodyTotals = ").append(toJsNumberArray(compSalesBodyTotals)).append(";\n");
+        script.append("  const compSalesBodySuccessCounts = ").append(toJsNumberArray(compSalesBodySuccessCounts)).append(";\n");
+        script.append("  const compSalesBodySoldCounts = ").append(toJsNumberArray(compSalesBodySoldCounts)).append(";\n");
+        script.append("  const compSalesAgeLabels = ").append(toJsStringArray(compSalesAgeLabels)).append(";\n");
+        script.append("  const compSalesAgeTotals = ").append(toJsNumberArray(compSalesAgeTotals)).append(";\n");
+        script.append("  const compSalesAgeSuccessCounts = ").append(toJsNumberArray(compSalesAgeSuccessCounts)).append(";\n");
+        script.append("  const compSalesAgeSoldCounts = ").append(toJsNumberArray(compSalesAgeSoldCounts)).append(";\n");
         script.append("  const tplBodyLabels = ").append(toJsStringArray(tplBodyLabels)).append(";\n");
         script.append("  const tplBodySuccessData = {\n");
         script.append("    labels: tplBodyLabels,\n");
@@ -1488,6 +1692,18 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
+        script.append("  const tplSalesBodyStats = buildSalesStats(tplSalesBodyLabels, tplSalesBodyTotals, tplSalesBodySuccessCounts, tplSalesBodySoldCounts);\n");
+        script.append("  const tplSalesAgeStats = buildSalesStats(tplSalesAgeLabels, tplSalesAgeTotals, tplSalesAgeSuccessCounts, tplSalesAgeSoldCounts);\n");
+        script.append("  const compSalesBodyStats = buildSalesStats(compSalesBodyLabels, compSalesBodyTotals, compSalesBodySuccessCounts, compSalesBodySoldCounts);\n");
+        script.append("  const compSalesAgeStats = buildSalesStats(compSalesAgeLabels, compSalesAgeTotals, compSalesAgeSuccessCounts, compSalesAgeSoldCounts);\n");
+        script.append("  const tplSalesBodyChart = createSalesChart('tplSalesBodyChart', tplSalesBodyStats, 'tplSalesBody');\n");
+        script.append("  const tplSalesAgeChart = createSalesChart('tplSalesAgeChart', tplSalesAgeStats, 'tplSalesAge');\n");
+        script.append("  const compSalesBodyChart = createSalesChart('compSalesBodyChart', compSalesBodyStats, 'compSalesBody');\n");
+        script.append("  const compSalesAgeChart = createSalesChart('compSalesAgeChart', compSalesAgeStats, 'compSalesAge');\n");
+        script.append("  registerConversionToggle('tplSalesBody', tplSalesBodyChart);\n");
+        script.append("  registerConversionToggle('tplSalesAge', tplSalesAgeChart);\n");
+        script.append("  registerConversionToggle('compSalesBody', compSalesBodyChart);\n");
+        script.append("  registerConversionToggle('compSalesAge', compSalesAgeChart);\n");
         script.append("  new Chart(document.getElementById('tplOutcomesChart'), { type: 'bar', data: tplData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('compOutcomesChart'), { type: 'bar', data: compData, options: sharedOptions });\n");
         script.append("  new Chart(document.getElementById('overallSpecUniqueChart'), { type: 'bar', data: overallSpecificationData, options: sharedOptions });\n");
@@ -1558,6 +1774,26 @@ public class HtmlReportGenerator {
         script.append("  });\n");
         script.append("</script>\n");
         return script.toString();
+    }
+
+    private void populateSalesChartData(List<QuoteStatistics.SalesConversionStats> stats,
+                                         List<String> labels,
+                                         List<Long> totalRequests,
+                                         List<Long> successfulQuotes,
+                                         List<Long> soldPolicies) {
+        if (stats.isEmpty()) {
+            labels.add("No Data");
+            totalRequests.add(0L);
+            successfulQuotes.add(0L);
+            soldPolicies.add(0L);
+            return;
+        }
+        for (QuoteStatistics.SalesConversionStats stat : stats) {
+            labels.add(stat.getLabel());
+            totalRequests.add(stat.getTotalRequests());
+            successfulQuotes.add(stat.getSuccessfulQuotes());
+            soldPolicies.add(stat.getSoldPolicies());
+        }
     }
 
     private static String formatPercentage(long numerator, long denominator) {
