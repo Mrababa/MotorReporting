@@ -49,6 +49,12 @@ public class QuoteStatistics {
     private final List<SalesConversionStats> comprehensiveSalesByAgeRange;
     private final List<SalesConversionStats> comprehensiveSalesByChineseClassification;
     private final List<SalesConversionStats> comprehensiveSalesByFuelType;
+    private final long comprehensivePoliciesSold;
+    private final BigDecimal comprehensiveTotalPremium;
+    private final List<SalesPremiumBreakdown> comprehensiveBodyTypePremiums;
+    private final List<MakeModelPremiumSummary> comprehensiveTopModelsByPremium;
+    private final double comprehensiveChineseSalesRatio;
+    private final double comprehensiveElectricSalesRatio;
     private final List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis;
@@ -95,6 +101,12 @@ public class QuoteStatistics {
                            List<SalesConversionStats> comprehensiveSalesByAgeRange,
                            List<SalesConversionStats> comprehensiveSalesByChineseClassification,
                            List<SalesConversionStats> comprehensiveSalesByFuelType,
+                           long comprehensivePoliciesSold,
+                           BigDecimal comprehensiveTotalPremium,
+                           List<SalesPremiumBreakdown> comprehensiveBodyTypePremiums,
+                           List<MakeModelPremiumSummary> comprehensiveTopModelsByPremium,
+                           double comprehensiveChineseSalesRatio,
+                           double comprehensiveElectricSalesRatio,
                            List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis,
                            List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis,
                            List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis,
@@ -141,6 +153,12 @@ public class QuoteStatistics {
         this.comprehensiveSalesByChineseClassification =
                 immutableCopy(comprehensiveSalesByChineseClassification);
         this.comprehensiveSalesByFuelType = immutableCopy(comprehensiveSalesByFuelType);
+        this.comprehensivePoliciesSold = comprehensivePoliciesSold;
+        this.comprehensiveTotalPremium = comprehensiveTotalPremium.setScale(2, RoundingMode.HALF_UP);
+        this.comprehensiveBodyTypePremiums = immutableCopy(comprehensiveBodyTypePremiums);
+        this.comprehensiveTopModelsByPremium = immutableCopy(comprehensiveTopModelsByPremium);
+        this.comprehensiveChineseSalesRatio = comprehensiveChineseSalesRatio;
+        this.comprehensiveElectricSalesRatio = comprehensiveElectricSalesRatio;
         this.tplTopRejectedModelsByUniqueChassis = immutableCopy(tplTopRejectedModelsByUniqueChassis);
         this.topRequestedMakeModelsByUniqueChassis = immutableCopy(topRequestedMakeModelsByUniqueChassis);
         this.tplTopRequestedMakeModelsByUniqueChassis = immutableCopy(tplTopRequestedMakeModelsByUniqueChassis);
@@ -323,6 +341,30 @@ public class QuoteStatistics {
 
     public List<SalesConversionStats> getComprehensiveSalesByFuelType() {
         return comprehensiveSalesByFuelType;
+    }
+
+    public long getComprehensivePoliciesSold() {
+        return comprehensivePoliciesSold;
+    }
+
+    public BigDecimal getComprehensiveTotalPremium() {
+        return comprehensiveTotalPremium;
+    }
+
+    public List<SalesPremiumBreakdown> getComprehensiveBodyTypePremiums() {
+        return comprehensiveBodyTypePremiums;
+    }
+
+    public List<MakeModelPremiumSummary> getComprehensiveTopModelsByPremium() {
+        return comprehensiveTopModelsByPremium;
+    }
+
+    public double getComprehensiveChineseSalesRatio() {
+        return comprehensiveChineseSalesRatio;
+    }
+
+    public double getComprehensiveElectricSalesRatio() {
+        return comprehensiveElectricSalesRatio;
     }
 
     public List<ValueRangeStats> getComprehensiveEstimatedValueStats() {
@@ -646,6 +688,67 @@ public class QuoteStatistics {
 
         public boolean hasData() {
             return totalRequests > 0 || successfulQuotes > 0 || soldPolicies > 0;
+        }
+    }
+
+    public static final class SalesPremiumBreakdown {
+        private final String label;
+        private final long soldPolicies;
+        private final BigDecimal totalPremium;
+
+        public SalesPremiumBreakdown(String label, long soldPolicies, BigDecimal totalPremium) {
+            this.label = Objects.requireNonNull(label, "label");
+            this.soldPolicies = soldPolicies;
+            this.totalPremium = totalPremium == null
+                    ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                    : totalPremium.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public long getSoldPolicies() {
+            return soldPolicies;
+        }
+
+        public BigDecimal getTotalPremium() {
+            return totalPremium;
+        }
+    }
+
+    public static final class MakeModelPremiumSummary {
+        private final String make;
+        private final String model;
+        private final long soldPolicies;
+        private final BigDecimal totalPremium;
+
+        public MakeModelPremiumSummary(String make,
+                                       String model,
+                                       long soldPolicies,
+                                       BigDecimal totalPremium) {
+            this.make = Objects.requireNonNull(make, "make");
+            this.model = Objects.requireNonNull(model, "model");
+            this.soldPolicies = soldPolicies;
+            this.totalPremium = totalPremium == null
+                    ? BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP)
+                    : totalPremium.setScale(2, RoundingMode.HALF_UP);
+        }
+
+        public String getMake() {
+            return make;
+        }
+
+        public String getModel() {
+            return model;
+        }
+
+        public long getSoldPolicies() {
+            return soldPolicies;
+        }
+
+        public BigDecimal getTotalPremium() {
+            return totalPremium;
         }
     }
 
