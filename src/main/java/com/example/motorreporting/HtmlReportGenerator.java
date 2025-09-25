@@ -1259,6 +1259,9 @@ public class HtmlReportGenerator {
         List<QuoteStatistics.MakeModelPremiumSummary> compTopModelsByPremium =
                 statistics.getComprehensiveTopModelsByPremium();
 
+        List<QuoteStatistics.SalesPremiumBreakdown> tplBodyPremiumBreakdowns =
+                statistics.getTplBodyTypePremiums();
+
         Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyOutcomes = statistics.getTplBodyCategoryOutcomes();
         Map<String, QuoteStatistics.OutcomeBreakdown> tplChineseOutcomes = statistics.getTplChineseOutcomeBreakdown();
         Map<String, QuoteStatistics.OutcomeBreakdown> tplElectricOutcomes = statistics.getTplElectricOutcomeBreakdown();
