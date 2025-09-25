@@ -92,6 +92,14 @@ public class HtmlReportGenerator {
         String headerText = buildHeaderText(records, reportDateRange);
         Optional<String> insuranceCompanyName = findInsuranceCompanyName(records);
 
+        long tplPoliciesSold = statistics.getTplPoliciesSold();
+        BigDecimal tplTotalPremium = statistics.getTplTotalPremium();
+        double tplChineseSalesRatio = statistics.getTplChineseSalesRatio();
+        double tplElectricSalesRatio = statistics.getTplElectricSalesRatio();
+        List<QuoteStatistics.SalesPremiumBreakdown> tplBodyPremiumBreakdowns =
+                statistics.getTplBodyTypePremiums();
+        List<QuoteStatistics.MakeModelPremiumSummary> tplTopModelsByPremium =
+                statistics.getTplTopModelsByPremium();
         long compPoliciesSold = statistics.getComprehensivePoliciesSold();
         BigDecimal compTotalPremium = statistics.getComprehensiveTotalPremium();
         double compChineseSalesRatio = statistics.getComprehensiveChineseSalesRatio();
@@ -605,6 +613,22 @@ public class HtmlReportGenerator {
         html.append("      <h2 class=\"section-title\">TPL Sales Conversion</h2>\n");
         html.append("      <p>Track how successful quotes translate into issued policies by customer segment.</p>\n");
         html.append("    </div>\n");
+        html.append("    <div class=\"summary-grid\">\n");
+        appendSummaryCard(html, "Total Policies Sold", formatInteger(tplPoliciesSold), "#0f766e");
+        appendSummaryCard(html, "Total Premium", formatCurrency(tplTotalPremium), "#f59e0b");
+        appendSummaryCard(html, "Chinese Market Conversion", PERCENT_FORMAT.format(tplChineseSalesRatio), "#2563eb");
+        appendSummaryCard(html, "Electric Vehicles Conversion", PERCENT_FORMAT.format(tplElectricSalesRatio), "#7c3aed");
+        html.append("    </div>\n");
+        html.append("    <div class=\"table-grid\">\n");
+        appendBodyTypePremiumTable(html, "Sales Breakdown by Body Type", tplBodyPremiumBreakdowns);
+        appendTopModelsByPremiumTable(html, "Top 10 Performing Models", tplTopModelsByPremium);
+        html.append("    </div>\n");
+        html.append("    <div class=\"charts\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide\">\n");
+        html.append("        <h2>Body Type Premium & Policy Mix</h2>\n");
+        html.append("        <canvas id=\"tplSalesBodyPremiumChart\"></canvas>\n");
+        html.append("      </div>\n");
+        html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
         html.append("        <div class=\"chart-card__header\">\n");
@@ -1064,7 +1088,7 @@ public class HtmlReportGenerator {
                 .append(escapeHtml(heading))
                 .append("</h3>\n");
         if (breakdowns.isEmpty()) {
-            html.append("      <p class=\"empty-state\">No comprehensive sales recorded.</p>\n");
+            html.append("      <p class=\"empty-state\">No sales recorded.</p>\n");
             html.append("    </div>\n");
             return;
         }
@@ -1072,7 +1096,7 @@ public class HtmlReportGenerator {
         html.append("        <thead>\n");
         html.append("          <tr>\n");
         html.append("            <th scope=\"col\">Body Type</th>\n");
-        html.append("            <th scope=\"col\" class=\"numeric\">Policies Sold</th>\n");
+        html.append("            <th scope=\"col\" class=\"numeric\">Total Policies</th>\n");
         html.append("            <th scope=\"col\" class=\"numeric\">Total Premium</th>\n");
         html.append("          </tr>\n");
         html.append("        </thead>\n");
@@ -1103,7 +1127,7 @@ public class HtmlReportGenerator {
                 .append(escapeHtml(heading))
                 .append("</h3>\n");
         if (summaries.isEmpty()) {
-            html.append("      <p class=\"empty-state\">No issued policies found for comprehensive models.</p>\n");
+            html.append("      <p class=\"empty-state\">No issued policies found for the selected coverage.</p>\n");
             html.append("    </div>\n");
             return;
         }
@@ -1258,6 +1282,11 @@ public class HtmlReportGenerator {
         List<QuoteStatistics.SalesConversionStats> compSalesByChinese =
                 statistics.getComprehensiveSalesByChineseClassification();
         List<QuoteStatistics.SalesConversionStats> compSalesByFuel = statistics.getComprehensiveSalesByFuelType();
+        List<String> tplBodyPremiumLabels = new ArrayList<>();
+        List<Long> tplBodyPremiumPolicies = new ArrayList<>();
+        List<BigDecimal> tplBodyPremiumPremiums = new ArrayList<>();
+        populatePremiumChartData(tplBodyPremiumBreakdowns, tplBodyPremiumLabels,
+                tplBodyPremiumPolicies, tplBodyPremiumPremiums);
         List<String> compBodyPremiumLabels = new ArrayList<>();
         List<Long> compBodyPremiumPolicies = new ArrayList<>();
         List<BigDecimal> compBodyPremiumPremiums = new ArrayList<>();
@@ -1735,6 +1764,9 @@ public class HtmlReportGenerator {
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
+        script.append("  const tplBodyPremiumLabels = ").append(toJsStringArray(tplBodyPremiumLabels)).append(";\n");
+        script.append("  const tplBodyPremiumPolicies = ").append(toJsNumberArray(tplBodyPremiumPolicies)).append(";\n");
+        script.append("  const tplBodyPremiumPremiums = ").append(toJsNumberArray(tplBodyPremiumPremiums)).append(";\n");
         script.append("  const compBodyPremiumLabels = ").append(toJsStringArray(compBodyPremiumLabels)).append(";\n");
         script.append("  const compBodyPremiumPolicies = ").append(toJsNumberArray(compBodyPremiumPolicies)).append(";\n");
         script.append("  const compBodyPremiumPremiums = ").append(toJsNumberArray(compBodyPremiumPremiums)).append(";\n");
@@ -1958,6 +1990,32 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
+        script.append("  const tplBodyPremiumChartData = {\n");
+        script.append("    labels: tplBodyPremiumLabels,\n");
+        script.append("    datasets: [\n");
+        script.append("      {\n");
+        script.append("        type: 'bar',\n");
+        script.append("        label: 'Policies Sold',\n");
+        script.append("        data: tplBodyPremiumPolicies,\n");
+        script.append("        backgroundColor: '#0ea5e9',\n");
+        script.append("        borderRadius: 8,\n");
+        script.append("        yAxisID: 'yPolicies'\n");
+        script.append("      },\n");
+        script.append("      {\n");
+        script.append("        type: 'line',\n");
+        script.append("        label: 'Total Premium',\n");
+        script.append("        data: tplBodyPremiumPremiums,\n");
+        script.append("        borderColor: '#f59e0b',\n");
+        script.append("        backgroundColor: 'rgba(245, 158, 11, 0.25)',\n");
+        script.append("        borderWidth: 3,\n");
+        script.append("        tension: 0.35,\n");
+        script.append("        fill: true,\n");
+        script.append("        pointRadius: 4,\n");
+        script.append("        pointHoverRadius: 6,\n");
+        script.append("        yAxisID: 'yPremium'\n");
+        script.append("      }\n");
+        script.append("    ]\n");
+        script.append("  };\n");
         script.append("  const compBodyPremiumChartData = {\n");
         script.append("    labels: compBodyPremiumLabels,\n");
         script.append("    datasets: [\n");
@@ -1984,7 +2042,7 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
-        script.append("  const compBodyPremiumChartOptions = {\n");
+        script.append("  const bodyPremiumChartOptions = {\n");
         script.append("    responsive: true,\n");
         script.append("    interaction: { mode: 'index', intersect: false },\n");
         script.append("    scales: {\n");
@@ -2135,7 +2193,8 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
-        script.append("  new Chart(document.getElementById('compSalesBodyPremiumChart'), { type: 'bar', data: compBodyPremiumChartData, options: compBodyPremiumChartOptions });\n");
+        script.append("  new Chart(document.getElementById('tplSalesBodyPremiumChart'), { type: 'bar', data: tplBodyPremiumChartData, options: bodyPremiumChartOptions });\n");
+        script.append("  new Chart(document.getElementById('compSalesBodyPremiumChart'), { type: 'bar', data: compBodyPremiumChartData, options: bodyPremiumChartOptions });\n");
         script.append("  const tplSalesBodyStats = buildSalesStats(tplSalesBodyLabels, tplSalesBodyTotals, tplSalesBodySuccessCounts, tplSalesBodySoldCounts);\n");
         script.append("  const tplSalesAgeStats = buildSalesStats(tplSalesAgeLabels, tplSalesAgeTotals, tplSalesAgeSuccessCounts, tplSalesAgeSoldCounts);\n");
         script.append("  const compSalesBodyStats = buildSalesStats(compSalesBodyLabels, compSalesBodyTotals, compSalesBodySuccessCounts, compSalesBodySoldCounts);\n");
