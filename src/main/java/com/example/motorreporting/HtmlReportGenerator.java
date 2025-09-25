@@ -243,6 +243,47 @@ public class HtmlReportGenerator {
         html.append("        .chart-card.chart-card--wide canvas {\n");
         html.append("            height: 420px;\n");
         html.append("        }\n");
+        html.append("        .chart-card.chart-card--split {\n");
+        html.append("            display: flex;\n");
+        html.append("            flex-wrap: wrap;\n");
+        html.append("            gap: 1.75rem;\n");
+        html.append("            align-items: stretch;\n");
+        html.append("        }\n");
+        html.append("        .chart-card__chart {\n");
+        html.append("            flex: 2 1 360px;\n");
+        html.append("        }\n");
+        html.append("        .chart-card__chart canvas {\n");
+        html.append("            height: 360px;\n");
+        html.append("        }\n");
+        html.append("        .chart-card__table {\n");
+        html.append("            flex: 1 1 260px;\n");
+        html.append("            display: flex;\n");
+        html.append("            flex-direction: column;\n");
+        html.append("        }\n");
+        html.append("        .chart-card__table h3 {\n");
+        html.append("            margin: 0 0 0.85rem;\n");
+        html.append("            font-size: 1rem;\n");
+        html.append("            font-weight: 600;\n");
+        html.append("            color: #1f2937;\n");
+        html.append("        }\n");
+        html.append("        .conversion-table {\n");
+        html.append("            width: 100%;\n");
+        html.append("            border-collapse: collapse;\n");
+        html.append("        }\n");
+        html.append("        .conversion-table th,\n");
+        html.append("        .conversion-table td {\n");
+        html.append("            padding: 0.55rem 0.75rem;\n");
+        html.append("            border-bottom: 1px solid #e5e7eb;\n");
+        html.append("            font-size: 0.9rem;\n");
+        html.append("            text-align: left;\n");
+        html.append("        }\n");
+        html.append("        .conversion-table th.numeric,\n");
+        html.append("        .conversion-table td.numeric {\n");
+        html.append("            text-align: right;\n");
+        html.append("        }\n");
+        html.append("        .conversion-table tbody tr:last-child td {\n");
+        html.append("            border-bottom: none;\n");
+        html.append("        }\n");
         html.append("        .chart-card h2 {\n");
         html.append("            margin: 0 0 1rem;\n");
         html.append("            font-size: 1.1rem;\n");
@@ -374,6 +415,13 @@ public class HtmlReportGenerator {
         html.append("        @media (max-width: 600px) {\n");
         html.append("            main {\n");
         html.append("                padding: 2.5rem 1.25rem 3rem;\n");
+        html.append("            }\n");
+        html.append("            .chart-card.chart-card--split {\n");
+        html.append("                flex-direction: column;\n");
+        html.append("            }\n");
+        html.append("            .chart-card__chart,\n");
+        html.append("            .chart-card__table {\n");
+        html.append("                flex: 1 1 auto;\n");
         html.append("            }\n");
         html.append("            canvas {\n");
         html.append("                height: 260px;\n");
@@ -630,34 +678,25 @@ public class HtmlReportGenerator {
         html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
-        html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <div class=\"chart-card__header\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide chart-card--split\">\n");
+        html.append("        <div class=\"chart-card__chart\">\n");
         html.append("          <h2>Sales by Body Type</h2>\n");
-        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"tplSalesBody\">\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
-        html.append("          </div>\n");
+        html.append("          <canvas id=\"tplSalesBodyChart\"></canvas>\n");
         html.append("        </div>\n");
-        html.append("        <canvas id=\"tplSalesBodyChart\"></canvas>\n");
+        appendSalesConversionTable(html, "Body Type Conversion", tplSalesByBody);
         html.append("      </div>\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <div class=\"chart-card__header\">\n");
-        html.append("          <h2>Sales by Age Group</h2>\n");
-        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"tplSalesAge\">\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
-        html.append("          </div>\n");
-        html.append("        </div>\n");
+        html.append("        <h2>Sales by Age Group</h2>\n");
         html.append("        <canvas id=\"tplSalesAgeChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <h2>Chinese Quotes Conversion Ratio</h2>\n");
+        html.append("        <h2>Chinese Quotes Conversion</h2>\n");
         html.append("        <canvas id=\"tplSalesChineseChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <h2>Electric Vehicles Conversion Ratio</h2>\n");
+        html.append("        <h2>Electric Vehicles Conversion</h2>\n");
         html.append("        <canvas id=\"tplSalesFuelChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
@@ -684,34 +723,25 @@ public class HtmlReportGenerator {
         html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
-        html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <div class=\"chart-card__header\">\n");
+        html.append("      <div class=\"chart-card chart-card--wide chart-card--split\">\n");
+        html.append("        <div class=\"chart-card__chart\">\n");
         html.append("          <h2>Sales by Body Type</h2>\n");
-        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"compSalesBody\">\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
-        html.append("          </div>\n");
+        html.append("          <canvas id=\"compSalesBodyChart\"></canvas>\n");
         html.append("        </div>\n");
-        html.append("        <canvas id=\"compSalesBodyChart\"></canvas>\n");
+        appendSalesConversionTable(html, "Body Type Conversion", compSalesByBody);
         html.append("      </div>\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <div class=\"chart-card__header\">\n");
-        html.append("          <h2>Sales by Age Group</h2>\n");
-        html.append("          <div class=\"chart-toggle\" data-conversion-toggle=\"compSalesAge\">\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button active\" data-mode=\"overall\">Overall Conversion</button>\n");
-        html.append("            <button type=\"button\" class=\"chart-toggle__button\" data-mode=\"quote\">Quote Conversion</button>\n");
-        html.append("          </div>\n");
-        html.append("        </div>\n");
+        html.append("        <h2>Sales by Age Group</h2>\n");
         html.append("        <canvas id=\"compSalesAgeChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <h2>Chinese Quotes Conversion Ratio</h2>\n");
+        html.append("        <h2>Chinese Quotes Conversion</h2>\n");
         html.append("        <canvas id=\"compSalesChineseChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("      <div class=\"chart-card chart-card--wide\">\n");
-        html.append("        <h2>Electric Vehicles Conversion Ratio</h2>\n");
+        html.append("        <h2>Electric Vehicles Conversion</h2>\n");
         html.append("        <canvas id=\"compSalesFuelChart\"></canvas>\n");
         html.append("      </div>\n");
         html.append("    </div>\n");
@@ -1119,6 +1149,46 @@ public class HtmlReportGenerator {
         html.append("    </div>\n");
     }
 
+    private void appendSalesConversionTable(StringBuilder html,
+                                            String heading,
+                                            List<QuoteStatistics.SalesConversionStats> stats) {
+        html.append("        <div class=\"chart-card__table\">\n");
+        html.append("          <h3>")
+                .append(escapeHtml(heading))
+                .append("</h3>\n");
+        html.append("          <table class=\"conversion-table\">\n");
+        html.append("            <thead>\n");
+        html.append("              <tr>\n");
+        html.append("                <th scope=\"col\">Segment</th>\n");
+        html.append("                <th scope=\"col\" class=\"numeric\">Policies Sold</th>\n");
+        html.append("                <th scope=\"col\" class=\"numeric\">Quote → Policy</th>\n");
+        html.append("              </tr>\n");
+        html.append("            </thead>\n");
+        html.append("            <tbody>\n");
+        if (stats.isEmpty()) {
+            html.append("              <tr>\n");
+            html.append("                <td colspan=\"3\" class=\"empty-state\">No sales records available.</td>\n");
+            html.append("              </tr>\n");
+        } else {
+            for (QuoteStatistics.SalesConversionStats stat : stats) {
+                html.append("              <tr>\n");
+                html.append("                <td>")
+                        .append(escapeHtml(stat.getLabel()))
+                        .append("</td>\n");
+                html.append("                <td class=\"numeric\">")
+                        .append(escapeHtml(formatInteger(stat.getSoldPolicies())))
+                        .append("</td>\n");
+                html.append("                <td class=\"numeric\">")
+                        .append(escapeHtml(formatPercentage(stat.getSoldPolicies(), stat.getTotalRequests())))
+                        .append("</td>\n");
+                html.append("              </tr>\n");
+            }
+        }
+        html.append("            </tbody>\n");
+        html.append("          </table>\n");
+        html.append("        </div>\n");
+    }
+
     private void appendTopModelsByPremiumTable(StringBuilder html,
                                                String heading,
                                                List<QuoteStatistics.MakeModelPremiumSummary> summaries) {
@@ -1451,28 +1521,32 @@ public class HtmlReportGenerator {
                 compSalesAgeSuccessCounts, compSalesAgeSoldCounts);
 
         List<String> tplSalesChineseLabels = new ArrayList<>();
-        List<Double> tplSalesChineseConvertedRatios = new ArrayList<>();
-        List<Double> tplSalesChineseNotConvertedRatios = new ArrayList<>();
-        populateConversionRatioData(tplSalesByChinese, tplSalesChineseLabels,
-                tplSalesChineseConvertedRatios, tplSalesChineseNotConvertedRatios);
+        List<Long> tplSalesChineseTotals = new ArrayList<>();
+        List<Long> tplSalesChineseSuccessCounts = new ArrayList<>();
+        List<Long> tplSalesChineseSoldCounts = new ArrayList<>();
+        populateSalesChartData(tplSalesByChinese, tplSalesChineseLabels, tplSalesChineseTotals,
+                tplSalesChineseSuccessCounts, tplSalesChineseSoldCounts);
 
         List<String> tplSalesFuelLabels = new ArrayList<>();
-        List<Double> tplSalesFuelConvertedRatios = new ArrayList<>();
-        List<Double> tplSalesFuelNotConvertedRatios = new ArrayList<>();
-        populateConversionRatioData(tplSalesByFuel, tplSalesFuelLabels,
-                tplSalesFuelConvertedRatios, tplSalesFuelNotConvertedRatios);
+        List<Long> tplSalesFuelTotals = new ArrayList<>();
+        List<Long> tplSalesFuelSuccessCounts = new ArrayList<>();
+        List<Long> tplSalesFuelSoldCounts = new ArrayList<>();
+        populateSalesChartData(tplSalesByFuel, tplSalesFuelLabels, tplSalesFuelTotals,
+                tplSalesFuelSuccessCounts, tplSalesFuelSoldCounts);
 
         List<String> compSalesChineseLabels = new ArrayList<>();
-        List<Double> compSalesChineseConvertedRatios = new ArrayList<>();
-        List<Double> compSalesChineseNotConvertedRatios = new ArrayList<>();
-        populateConversionRatioData(compSalesByChinese, compSalesChineseLabels,
-                compSalesChineseConvertedRatios, compSalesChineseNotConvertedRatios);
+        List<Long> compSalesChineseTotals = new ArrayList<>();
+        List<Long> compSalesChineseSuccessCounts = new ArrayList<>();
+        List<Long> compSalesChineseSoldCounts = new ArrayList<>();
+        populateSalesChartData(compSalesByChinese, compSalesChineseLabels, compSalesChineseTotals,
+                compSalesChineseSuccessCounts, compSalesChineseSoldCounts);
 
         List<String> compSalesFuelLabels = new ArrayList<>();
-        List<Double> compSalesFuelConvertedRatios = new ArrayList<>();
-        List<Double> compSalesFuelNotConvertedRatios = new ArrayList<>();
-        populateConversionRatioData(compSalesByFuel, compSalesFuelLabels,
-                compSalesFuelConvertedRatios, compSalesFuelNotConvertedRatios);
+        List<Long> compSalesFuelTotals = new ArrayList<>();
+        List<Long> compSalesFuelSuccessCounts = new ArrayList<>();
+        List<Long> compSalesFuelSoldCounts = new ArrayList<>();
+        populateSalesChartData(compSalesByFuel, compSalesFuelLabels, compSalesFuelTotals,
+                compSalesFuelSuccessCounts, compSalesFuelSoldCounts);
 
         List<String> tplManufactureYearLabels = new ArrayList<>();
         List<Double> tplManufactureYearSuccessRatios = new ArrayList<>();
@@ -1604,32 +1678,142 @@ public class HtmlReportGenerator {
         script.append("    soldPolicies: solds[index] == null ? 0 : solds[index]\n");
         script.append("  }));\n");
         script.append("  const numberFormatter = new Intl.NumberFormat('en-US');\n");
-        script.append("  const conversionState = {};\n");
-        script.append("  const computeConversion = (stat, mode) => {\n");
-        script.append("    const denominator = mode === 'quote' ? stat.successfulQuotes : stat.totalRequests;\n");
-        script.append("    if (!denominator) {\n");
+        script.append("  const computeOverallConversion = stat => {\n");
+        script.append("    if (!stat || !stat.totalRequests) {\n");
         script.append("      return 0;\n");
         script.append("    }\n");
-        script.append("    return (stat.soldPolicies / denominator) * 100;\n");
+        script.append("    return (stat.soldPolicies / stat.totalRequests) * 100;\n");
         script.append("  };\n");
-        script.append("  const createSalesTooltipCallbacks = (stats, toggleId) => ({\n");
-        script.append("    label: ctx => `${ctx.dataset.label}: ${numberFormatter.format(ctx.raw == null ? 0 : ctx.raw)}`,\n");
-        script.append("    afterBody: items => {\n");
-        script.append("      if (!items.length) {\n");
-        script.append("        return [];\n");
-        script.append("      }\n");
-        script.append("      const index = items[0].dataIndex;\n");
-        script.append("      const stat = stats[index];\n");
-        script.append("      const mode = conversionState[toggleId] || 'overall';\n");
-        script.append("      const ratio = computeConversion(stat, mode);\n");
-        script.append("      const modeLabel = mode === 'quote' ? 'Quote Conversion' : 'Overall Conversion';\n");
-        script.append("      return [\n");
-        script.append("        `${modeLabel}: ${ratio.toFixed(1)}%`,\n");
-        script.append("        `Total Requests: ${numberFormatter.format(stat.totalRequests)}`\n");
-        script.append("      ];\n");
+        script.append("  const createBodySalesChart = (canvasId, stats) => {\n");
+        script.append("    const canvas = document.getElementById(canvasId);\n");
+        script.append("    if (!canvas) {\n");
+        script.append("      return null;\n");
         script.append("    }\n");
-        script.append("  });\n");
-        script.append("  const createSalesChart = (canvasId, stats, toggleId) => {\n");
+        script.append("    return new Chart(canvas, {\n");
+        script.append("      type: 'bar',\n");
+        script.append("      data: {\n");
+        script.append("        labels: stats.map(stat => stat.label),\n");
+        script.append("        datasets: [{\n");
+        script.append("          label: 'Policies Sold',\n");
+        script.append("          data: stats.map(stat => stat.soldPolicies),\n");
+        script.append("          backgroundColor: '#16a34a',\n");
+        script.append("          borderRadius: 8\n");
+        script.append("        }]\n");
+        script.append("      },\n");
+        script.append("      options: {\n");
+        script.append("        ...sharedOptions,\n");
+        script.append("        plugins: {\n");
+        script.append("          ...sharedOptions.plugins,\n");
+        script.append("          tooltip: {\n");
+        script.append("            callbacks: {\n");
+        script.append("              label: ctx => `Policies Sold: ${numberFormatter.format(ctx.raw ?? 0)}`,\n");
+        script.append("              afterBody: items => {\n");
+        script.append("                if (!items.length) {\n");
+        script.append("                  return [];\n");
+        script.append("                }\n");
+        script.append("                const stat = stats[items[0].dataIndex];\n");
+        script.append("                const conversion = computeOverallConversion(stat);\n");
+        script.append("                return [\n");
+        script.append("                  `Total Quotes: ${numberFormatter.format(stat.totalRequests)}`,\n");
+        script.append("                  `Quote → Policy: ${conversion.toFixed(1)}%`\n");
+        script.append("                ];\n");
+        script.append("              }\n");
+        script.append("            }\n");
+        script.append("          },\n");
+        script.append("          legend: { display: false }\n");
+        script.append("        }\n");
+        script.append("      }\n");
+        script.append("    });\n");
+        script.append("  };\n");
+        script.append("  const createAgeSalesChart = (canvasId, stats) => {\n");
+        script.append("    const canvas = document.getElementById(canvasId);\n");
+        script.append("    if (!canvas) {\n");
+        script.append("      return null;\n");
+        script.append("    }\n");
+        script.append("    const conversionSeries = stats.map(stat => Number(computeOverallConversion(stat).toFixed(1)));\n");
+        script.append("    return new Chart(canvas, {\n");
+        script.append("      type: 'bar',\n");
+        script.append("      data: {\n");
+        script.append("        labels: stats.map(stat => stat.label),\n");
+        script.append("        datasets: [\n");
+        script.append("          {\n");
+        script.append("            type: 'bar',\n");
+        script.append("            label: 'Policies Sold',\n");
+        script.append("            data: stats.map(stat => stat.soldPolicies),\n");
+        script.append("            backgroundColor: '#16a34a',\n");
+        script.append("            borderRadius: 8,\n");
+        script.append("            order: 2\n");
+        script.append("          },\n");
+        script.append("          {\n");
+        script.append("            type: 'line',\n");
+        script.append("            label: 'Quotes Generated',\n");
+        script.append("            data: stats.map(stat => stat.totalRequests),\n");
+        script.append("            borderColor: '#2563eb',\n");
+        script.append("            backgroundColor: '#2563eb',\n");
+        script.append("            tension: 0.35,\n");
+        script.append("            fill: false,\n");
+        script.append("            pointRadius: 4,\n");
+        script.append("            pointHoverRadius: 6,\n");
+        script.append("            order: 1,\n");
+        script.append("            yAxisID: 'y'\n");
+        script.append("          },\n");
+        script.append("          {\n");
+        script.append("            type: 'line',\n");
+        script.append("            label: 'Conversion Rate',\n");
+        script.append("            data: conversionSeries,\n");
+        script.append("            borderColor: '#f97316',\n");
+        script.append("            backgroundColor: '#f97316',\n");
+        script.append("            borderDash: [4, 4],\n");
+        script.append("            tension: 0.35,\n");
+        script.append("            fill: false,\n");
+        script.append("            pointRadius: 4,\n");
+        script.append("            pointHoverRadius: 6,\n");
+        script.append("            order: 0,\n");
+        script.append("            yAxisID: 'y1'\n");
+        script.append("          }\n");
+        script.append("        ]\n");
+        script.append("      },\n");
+        script.append("      options: {\n");
+        script.append("        responsive: true,\n");
+        script.append("        interaction: { mode: 'index', intersect: false },\n");
+        script.append("        scales: {\n");
+        script.append("          y: {\n");
+        script.append("            beginAtZero: true,\n");
+        script.append("            title: { display: true, text: 'Policies / Quotes' },\n");
+        script.append("            ticks: { callback: value => numberFormatter.format(value) }\n");
+        script.append("          },\n");
+        script.append("          y1: {\n");
+        script.append("            beginAtZero: true,\n");
+        script.append("            position: 'right',\n");
+        script.append("            grid: { drawOnChartArea: false },\n");
+        script.append("            ticks: { callback: value => `${value}%` },\n");
+        script.append("            title: { display: true, text: 'Conversion Rate' }\n");
+        script.append("          }\n");
+        script.append("        },\n");
+        script.append("        plugins: {\n");
+        script.append("          legend: { display: true, position: 'bottom', labels: { usePointStyle: true } },\n");
+        script.append("          tooltip: {\n");
+        script.append("            callbacks: {\n");
+        script.append("              label: ctx => {\n");
+        script.append("                if (ctx.dataset.label === 'Conversion Rate') {\n");
+        script.append("                  return `Conversion Rate: ${ctx.raw?.toFixed(1) ?? 0}%`;\n");
+        script.append("                }\n");
+        script.append("                return `${ctx.dataset.label}: ${numberFormatter.format(ctx.raw ?? 0)}`;\n");
+        script.append("              },\n");
+        script.append("              afterBody: items => {\n");
+        script.append("                if (!items.length) {\n");
+        script.append("                  return [];\n");
+        script.append("                }\n");
+        script.append("                const stat = stats[items[0].dataIndex];\n");
+        script.append("                return [`Quote → Policy: ${computeOverallConversion(stat).toFixed(1)}%`];\n");
+        script.append("              }\n");
+        script.append("            }\n");
+        script.append("          }\n");
+        script.append("        }\n");
+        script.append("      }\n");
+        script.append("    });\n");
+        script.append("  };\n");
+        script.append("  const createQuotePolicyChart = (canvasId, stats) => {\n");
         script.append("    const canvas = document.getElementById(canvasId);\n");
         script.append("    if (!canvas) {\n");
         script.append("      return null;\n");
@@ -1640,13 +1824,13 @@ public class HtmlReportGenerator {
         script.append("        labels: stats.map(stat => stat.label),\n");
         script.append("        datasets: [\n");
         script.append("          {\n");
-        script.append("            label: 'Successful Quotes',\n");
-        script.append("            data: stats.map(stat => stat.successfulQuotes),\n");
+        script.append("            label: 'Quotes Generated',\n");
+        script.append("            data: stats.map(stat => stat.totalRequests),\n");
         script.append("            backgroundColor: '#2563eb',\n");
         script.append("            borderRadius: 8\n");
         script.append("          },\n");
         script.append("          {\n");
-        script.append("            label: 'Sold Policies',\n");
+        script.append("            label: 'Policies Sold',\n");
         script.append("            data: stats.map(stat => stat.soldPolicies),\n");
         script.append("            backgroundColor: '#16a34a',\n");
         script.append("            borderRadius: 8\n");
@@ -1659,40 +1843,20 @@ public class HtmlReportGenerator {
         script.append("        plugins: {\n");
         script.append("          ...sharedOptions.plugins,\n");
         script.append("          legend: { display: true, position: 'bottom', labels: { usePointStyle: true } },\n");
-        script.append("          tooltip: createSalesTooltipCallbacks(stats, toggleId)\n");
+        script.append("          tooltip: {\n");
+        script.append("            callbacks: {\n");
+        script.append("              label: ctx => `${ctx.dataset.label}: ${numberFormatter.format(ctx.raw ?? 0)}`,\n");
+        script.append("              afterBody: items => {\n");
+        script.append("                if (!items.length) {\n");
+        script.append("                  return [];\n");
+        script.append("                }\n");
+        script.append("                const stat = stats[items[0].dataIndex];\n");
+        script.append("                return [`Quote → Policy: ${computeOverallConversion(stat).toFixed(1)}%`];\n");
+        script.append("              }\n");
+        script.append("            }\n");
+        script.append("          }\n");
         script.append("        }\n");
         script.append("      }\n");
-        script.append("    });\n");
-        script.append("  };\n");
-        script.append("  const registerConversionToggle = (toggleId, chart) => {\n");
-        script.append("    if (!chart) {\n");
-        script.append("      return;\n");
-        script.append("    }\n");
-        script.append("    const toggle = document.querySelector(`[data-conversion-toggle='${toggleId}']`);\n");
-        script.append("    if (!toggle) {\n");
-        script.append("      return;\n");
-        script.append("    }\n");
-        script.append("    const buttons = Array.from(toggle.querySelectorAll('button[data-mode]'));\n");
-        script.append("    if (!buttons.length) {\n");
-        script.append("      return;\n");
-        script.append("    }\n");
-        script.append("    const setActive = button => {\n");
-        script.append("      const mode = button.getAttribute('data-mode') || 'overall';\n");
-        script.append("      conversionState[toggleId] = mode;\n");
-        script.append("      buttons.forEach(btn => btn.classList.toggle('active', btn === button));\n");
-        script.append("      chart.update();\n");
-        script.append("    };\n");
-        script.append("    const initial = buttons.find(btn => btn.classList.contains('active')) || buttons[0];\n");
-        script.append("    if (initial) {\n");
-        script.append("      setActive(initial);\n");
-        script.append("    }\n");
-        script.append("    buttons.forEach(button => {\n");
-        script.append("      button.addEventListener('click', () => {\n");
-        script.append("        if (button.classList.contains('active')) {\n");
-        script.append("          return;\n");
-        script.append("        }\n");
-        script.append("        setActive(button);\n");
-        script.append("      });\n");
         script.append("    });\n");
         script.append("  };\n");
         script.append("  const tplData = {\n");
@@ -1790,17 +1954,21 @@ public class HtmlReportGenerator {
         script.append("  const compSalesAgeSuccessCounts = ").append(toJsNumberArray(compSalesAgeSuccessCounts)).append(";\n");
         script.append("  const compSalesAgeSoldCounts = ").append(toJsNumberArray(compSalesAgeSoldCounts)).append(";\n");
         script.append("  const tplSalesChineseLabels = ").append(toJsStringArray(tplSalesChineseLabels)).append(";\n");
-        script.append("  const tplSalesChineseConverted = ").append(toJsDoubleArray(tplSalesChineseConvertedRatios)).append(";\n");
-        script.append("  const tplSalesChineseNotConverted = ").append(toJsDoubleArray(tplSalesChineseNotConvertedRatios)).append(";\n");
+        script.append("  const tplSalesChineseTotals = ").append(toJsNumberArray(tplSalesChineseTotals)).append(";\n");
+        script.append("  const tplSalesChineseSuccessCounts = ").append(toJsNumberArray(tplSalesChineseSuccessCounts)).append(";\n");
+        script.append("  const tplSalesChineseSoldCounts = ").append(toJsNumberArray(tplSalesChineseSoldCounts)).append(";\n");
         script.append("  const tplSalesFuelLabels = ").append(toJsStringArray(tplSalesFuelLabels)).append(";\n");
-        script.append("  const tplSalesFuelConverted = ").append(toJsDoubleArray(tplSalesFuelConvertedRatios)).append(";\n");
-        script.append("  const tplSalesFuelNotConverted = ").append(toJsDoubleArray(tplSalesFuelNotConvertedRatios)).append(";\n");
+        script.append("  const tplSalesFuelTotals = ").append(toJsNumberArray(tplSalesFuelTotals)).append(";\n");
+        script.append("  const tplSalesFuelSuccessCounts = ").append(toJsNumberArray(tplSalesFuelSuccessCounts)).append(";\n");
+        script.append("  const tplSalesFuelSoldCounts = ").append(toJsNumberArray(tplSalesFuelSoldCounts)).append(";\n");
         script.append("  const compSalesChineseLabels = ").append(toJsStringArray(compSalesChineseLabels)).append(";\n");
-        script.append("  const compSalesChineseConverted = ").append(toJsDoubleArray(compSalesChineseConvertedRatios)).append(";\n");
-        script.append("  const compSalesChineseNotConverted = ").append(toJsDoubleArray(compSalesChineseNotConvertedRatios)).append(";\n");
+        script.append("  const compSalesChineseTotals = ").append(toJsNumberArray(compSalesChineseTotals)).append(";\n");
+        script.append("  const compSalesChineseSuccessCounts = ").append(toJsNumberArray(compSalesChineseSuccessCounts)).append(";\n");
+        script.append("  const compSalesChineseSoldCounts = ").append(toJsNumberArray(compSalesChineseSoldCounts)).append(";\n");
         script.append("  const compSalesFuelLabels = ").append(toJsStringArray(compSalesFuelLabels)).append(";\n");
-        script.append("  const compSalesFuelConverted = ").append(toJsDoubleArray(compSalesFuelConvertedRatios)).append(";\n");
-        script.append("  const compSalesFuelNotConverted = ").append(toJsDoubleArray(compSalesFuelNotConvertedRatios)).append(";\n");
+        script.append("  const compSalesFuelTotals = ").append(toJsNumberArray(compSalesFuelTotals)).append(";\n");
+        script.append("  const compSalesFuelSuccessCounts = ").append(toJsNumberArray(compSalesFuelSuccessCounts)).append(";\n");
+        script.append("  const compSalesFuelSoldCounts = ").append(toJsNumberArray(compSalesFuelSoldCounts)).append(";\n");
         script.append("  const tplBodyLabels = ").append(toJsStringArray(tplBodyLabels)).append(";\n");
         script.append("  const tplBodySuccessData = {\n");
         script.append("    labels: tplBodyLabels,\n");
@@ -1955,44 +2123,7 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    ]\n");
         script.append("  };\n");
-        script.append("  const tplSalesChineseRatioData = {\n");
-        script.append("    labels: tplSalesChineseLabels,\n");
-        script.append("    datasets: [\n");
-        script.append("      {\n");
-        script.append("        label: 'Converted',\n");
-        script.append("        data: tplSalesChineseConverted,\n");
-        script.append("        backgroundColor: '#16a34a',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      },\n");
-        script.append("      {\n");
-        script.append("        label: 'Not Converted',\n");
-        script.append("        data: tplSalesChineseNotConverted,\n");
-        script.append("        backgroundColor: '#dc2626',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      }\n");
-        script.append("    ]\n");
-        script.append("  };\n");
-        script.append("  const tplSalesFuelRatioData = {\n");
-        script.append("    labels: tplSalesFuelLabels,\n");
-        script.append("    datasets: [\n");
-        script.append("      {\n");
-        script.append("        label: 'Converted',\n");
-        script.append("        data: tplSalesFuelConverted,\n");
-        script.append("        backgroundColor: '#0ea5e9',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      },\n");
-        script.append("      {\n");
-        script.append("        label: 'Not Converted',\n");
-        script.append("        data: tplSalesFuelNotConverted,\n");
-        script.append("        backgroundColor: '#f59e0b',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      }\n");
-        script.append("    ]\n");
-        script.append("  };\n");
+        
         script.append("  const tplBodyPremiumChartData = {\n");
         script.append("    labels: tplBodyPremiumLabels,\n");
         script.append("    datasets: [\n");
@@ -2076,44 +2207,7 @@ public class HtmlReportGenerator {
         script.append("      }\n");
         script.append("    }\n");
         script.append("  };\n");
-        script.append("  const compSalesChineseRatioData = {\n");
-        script.append("    labels: compSalesChineseLabels,\n");
-        script.append("    datasets: [\n");
-        script.append("      {\n");
-        script.append("        label: 'Converted',\n");
-        script.append("        data: compSalesChineseConverted,\n");
-        script.append("        backgroundColor: '#16a34a',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      },\n");
-        script.append("      {\n");
-        script.append("        label: 'Not Converted',\n");
-        script.append("        data: compSalesChineseNotConverted,\n");
-        script.append("        backgroundColor: '#dc2626',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      }\n");
-        script.append("    ]\n");
-        script.append("  };\n");
-        script.append("  const compSalesFuelRatioData = {\n");
-        script.append("    labels: compSalesFuelLabels,\n");
-        script.append("    datasets: [\n");
-        script.append("      {\n");
-        script.append("        label: 'Converted',\n");
-        script.append("        data: compSalesFuelConverted,\n");
-        script.append("        backgroundColor: '#0ea5e9',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      },\n");
-        script.append("      {\n");
-        script.append("        label: 'Not Converted',\n");
-        script.append("        data: compSalesFuelNotConverted,\n");
-        script.append("        backgroundColor: '#f59e0b',\n");
-        script.append("        stack: 'conversion',\n");
-        script.append("        borderRadius: 8\n");
-        script.append("      }\n");
-        script.append("    ]\n");
-        script.append("  };\n");
+        
         script.append("  const tplChineseElectricSegmentData = {\n");
         script.append("    labels: ").append(toJsStringArray(tplChineseElectricLabels)).append(",\n");
         script.append("    datasets: [\n");
@@ -2202,18 +2296,18 @@ public class HtmlReportGenerator {
         script.append("  const tplSalesAgeStats = buildSalesStats(tplSalesAgeLabels, tplSalesAgeTotals, tplSalesAgeSuccessCounts, tplSalesAgeSoldCounts);\n");
         script.append("  const compSalesBodyStats = buildSalesStats(compSalesBodyLabels, compSalesBodyTotals, compSalesBodySuccessCounts, compSalesBodySoldCounts);\n");
         script.append("  const compSalesAgeStats = buildSalesStats(compSalesAgeLabels, compSalesAgeTotals, compSalesAgeSuccessCounts, compSalesAgeSoldCounts);\n");
-        script.append("  const tplSalesBodyChart = createSalesChart('tplSalesBodyChart', tplSalesBodyStats, 'tplSalesBody');\n");
-        script.append("  const tplSalesAgeChart = createSalesChart('tplSalesAgeChart', tplSalesAgeStats, 'tplSalesAge');\n");
-        script.append("  const compSalesBodyChart = createSalesChart('compSalesBodyChart', compSalesBodyStats, 'compSalesBody');\n");
-        script.append("  const compSalesAgeChart = createSalesChart('compSalesAgeChart', compSalesAgeStats, 'compSalesAge');\n");
-        script.append("  registerConversionToggle('tplSalesBody', tplSalesBodyChart);\n");
-        script.append("  registerConversionToggle('tplSalesAge', tplSalesAgeChart);\n");
-        script.append("  registerConversionToggle('compSalesBody', compSalesBodyChart);\n");
-        script.append("  registerConversionToggle('compSalesAge', compSalesAgeChart);\n");
-        script.append("  new Chart(document.getElementById('tplSalesChineseChart'), { type: 'bar', data: tplSalesChineseRatioData, options: stackedRatioOptions });\n");
-        script.append("  new Chart(document.getElementById('tplSalesFuelChart'), { type: 'bar', data: tplSalesFuelRatioData, options: stackedRatioOptions });\n");
-        script.append("  new Chart(document.getElementById('compSalesChineseChart'), { type: 'bar', data: compSalesChineseRatioData, options: stackedRatioOptions });\n");
-        script.append("  new Chart(document.getElementById('compSalesFuelChart'), { type: 'bar', data: compSalesFuelRatioData, options: stackedRatioOptions });\n");
+        script.append("  const tplSalesChineseStats = buildSalesStats(tplSalesChineseLabels, tplSalesChineseTotals, tplSalesChineseSuccessCounts, tplSalesChineseSoldCounts);\n");
+        script.append("  const tplSalesFuelStats = buildSalesStats(tplSalesFuelLabels, tplSalesFuelTotals, tplSalesFuelSuccessCounts, tplSalesFuelSoldCounts);\n");
+        script.append("  const compSalesChineseStats = buildSalesStats(compSalesChineseLabels, compSalesChineseTotals, compSalesChineseSuccessCounts, compSalesChineseSoldCounts);\n");
+        script.append("  const compSalesFuelStats = buildSalesStats(compSalesFuelLabels, compSalesFuelTotals, compSalesFuelSuccessCounts, compSalesFuelSoldCounts);\n");
+        script.append("  createBodySalesChart('tplSalesBodyChart', tplSalesBodyStats);\n");
+        script.append("  createAgeSalesChart('tplSalesAgeChart', tplSalesAgeStats);\n");
+        script.append("  createBodySalesChart('compSalesBodyChart', compSalesBodyStats);\n");
+        script.append("  createAgeSalesChart('compSalesAgeChart', compSalesAgeStats);\n");
+        script.append("  createQuotePolicyChart('tplSalesChineseChart', tplSalesChineseStats);\n");
+        script.append("  createQuotePolicyChart('tplSalesFuelChart', tplSalesFuelStats);\n");
+        script.append("  createQuotePolicyChart('compSalesChineseChart', compSalesChineseStats);\n");
+        script.append("  createQuotePolicyChart('compSalesFuelChart', compSalesFuelStats);\n");
         script.append("  new Chart(document.getElementById('tplChineseOutcomeChart'), { type: 'bar', data: tplChineseOutcomeData, options: stackedRatioOptions });\n");
         script.append("  new Chart(document.getElementById('tplElectricOutcomeChart'), { type: 'bar', data: tplElectricOutcomeData, options: stackedRatioOptions });\n");
         script.append("  new Chart(document.getElementById('tplChineseElectricSegmentChart'), { type: 'bar', data: tplChineseElectricSegmentData, options: stackedRatioOptions });\n");
@@ -2327,29 +2421,6 @@ public class HtmlReportGenerator {
             totalRequests.add(stat.getTotalRequests());
             successfulQuotes.add(stat.getSuccessfulQuotes());
             soldPolicies.add(stat.getSoldPolicies());
-        }
-    }
-
-    private void populateConversionRatioData(List<QuoteStatistics.SalesConversionStats> stats,
-                                             List<String> labels,
-                                             List<Double> convertedRatios,
-                                             List<Double> notConvertedRatios) {
-        if (stats.isEmpty()) {
-            labels.add("No Data");
-            convertedRatios.add(0.0);
-            notConvertedRatios.add(0.0);
-            return;
-        }
-
-        for (QuoteStatistics.SalesConversionStats stat : stats) {
-            long total = stat.getTotalRequests();
-            long convertedCount = stat.getSoldPolicies();
-            long notConvertedCount = Math.max(0L, total - convertedCount);
-            double convertedRatio = total == 0 ? 0.0 : (convertedCount * 100.0) / total;
-            double notConvertedRatio = total == 0 ? 0.0 : (notConvertedCount * 100.0) / total;
-            labels.add(stat.getLabel());
-            convertedRatios.add(convertedRatio);
-            notConvertedRatios.add(notConvertedRatio);
         }
     }
 
