@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Year;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -332,7 +334,8 @@ public final class QuoteStatisticsCalculator {
         Map<String, Long> counts = records.stream()
                 .filter(QuoteRecord::isFailure)
                 .map(QuoteRecord::getFailureErrorText)
-                .flatMap(Optional::stream)
+                .filter(Optional::isPresent)
+                .map(Optional::get)
                 .filter(label -> !excludeNullLabel || !"null".equalsIgnoreCase(label))
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
 
@@ -347,7 +350,7 @@ public final class QuoteStatisticsCalculator {
             List<QuoteRecord> records,
             int limit) {
         if (limit <= 0) {
-            return List.of();
+            return Collections.emptyList();
         }
         Map<String, Set<String>> chassisByModel = new HashMap<>();
         for (QuoteRecord record : records) {
@@ -380,7 +383,7 @@ public final class QuoteStatisticsCalculator {
             List<QuoteRecord> records,
             int limit) {
         if (limit <= 0) {
-            return List.of();
+            return Collections.emptyList();
         }
         Map<MakeModelKey, MakeModelChassisAccumulator> accumulatorByMakeModel = new HashMap<>();
         for (QuoteRecord record : records) {
@@ -447,7 +450,7 @@ public final class QuoteStatisticsCalculator {
         }
 
         if (requestByKey.isEmpty()) {
-            return List.of(new QuoteStatistics.TrendPoint("No Data", 0, 0));
+            return Collections.singletonList(new QuoteStatistics.TrendPoint("No Data", 0, 0));
         }
 
         Map<String, TrendCounter> countsByLabel = new HashMap<>();
@@ -479,7 +482,7 @@ public final class QuoteStatisticsCalculator {
         }
 
         if (requestByKey.isEmpty()) {
-            return List.of(new QuoteStatistics.TrendPoint("No Data", 0, 0));
+            return Collections.singletonList(new QuoteStatistics.TrendPoint("No Data", 0, 0));
         }
 
         Map<String, TrendCounter> countsByLabel = new HashMap<>();
@@ -754,7 +757,7 @@ public final class QuoteStatisticsCalculator {
     private static final String OTHER_AGE_LABEL = "Other / Unknown";
     private static final String OTHER_VALUE_LABEL = "Other / Unknown";
 
-    private static final List<AgeRange> AGE_RANGES = List.of(
+    private static final List<AgeRange> AGE_RANGES = Collections.unmodifiableList(Arrays.asList(
             new AgeRange(18, 24),
             new AgeRange(25, 29),
             new AgeRange(30, 34),
@@ -765,9 +768,9 @@ public final class QuoteStatisticsCalculator {
             new AgeRange(55, 59),
             new AgeRange(60, 64),
             new AgeRange(65, 70)
-    );
+    ));
 
-    private static final List<ValueRange> VALUE_RANGES = List.of(
+    private static final List<ValueRange> VALUE_RANGES = Collections.unmodifiableList(Arrays.asList(
             new ValueRange(5_000, 49_999),
             new ValueRange(50_000, 99_999),
             new ValueRange(100_000, 149_999),
@@ -778,7 +781,7 @@ public final class QuoteStatisticsCalculator {
             new ValueRange(350_000, 399_999),
             new ValueRange(400_000, 449_999),
             new ValueRange(450_000, 500_000)
-    );
+    ));
 
     private static final class ManufactureYearRequest {
         private String label;
