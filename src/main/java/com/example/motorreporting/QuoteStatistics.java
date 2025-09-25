@@ -17,6 +17,9 @@ public class QuoteStatistics {
 
     private final QuoteGroupStats tplStats;
     private final QuoteGroupStats comprehensiveStats;
+    private final UniqueRequestSummary overallUniqueRequests;
+    private final UniqueRequestSummary tplUniqueRequests;
+    private final UniqueRequestSummary comprehensiveUniqueRequests;
     private final long uniqueChassisCount;
     private final long uniqueChassisSuccessCount;
     private final long uniqueChassisFailCount;
@@ -42,11 +45,14 @@ public class QuoteStatistics {
     private final Map<String, Long> comprehensiveErrorCounts;
     private final List<CategoryCount> uniqueChassisByInsurancePurpose;
     private final List<CategoryCount> uniqueChassisByBodyType;
-    private final List<CategoryCount> manufactureYearTrend;
-    private final List<CategoryCount> customerAgeTrend;
+    private final List<TrendPoint> manufactureYearTrend;
+    private final List<TrendPoint> customerAgeTrend;
 
     public QuoteStatistics(QuoteGroupStats tplStats,
                            QuoteGroupStats comprehensiveStats,
+                           UniqueRequestSummary overallUniqueRequests,
+                           UniqueRequestSummary tplUniqueRequests,
+                           UniqueRequestSummary comprehensiveUniqueRequests,
                            long uniqueChassisCount,
                            long uniqueChassisSuccessCount,
                            long uniqueChassisFailCount,
@@ -72,10 +78,13 @@ public class QuoteStatistics {
                            Map<String, Long> comprehensiveErrorCounts,
                            List<CategoryCount> uniqueChassisByInsurancePurpose,
                            List<CategoryCount> uniqueChassisByBodyType,
-                           List<CategoryCount> manufactureYearTrend,
-                           List<CategoryCount> customerAgeTrend) {
+                           List<TrendPoint> manufactureYearTrend,
+                           List<TrendPoint> customerAgeTrend) {
         this.tplStats = Objects.requireNonNull(tplStats, "tplStats");
         this.comprehensiveStats = Objects.requireNonNull(comprehensiveStats, "comprehensiveStats");
+        this.overallUniqueRequests = Objects.requireNonNull(overallUniqueRequests, "overallUniqueRequests");
+        this.tplUniqueRequests = Objects.requireNonNull(tplUniqueRequests, "tplUniqueRequests");
+        this.comprehensiveUniqueRequests = Objects.requireNonNull(comprehensiveUniqueRequests, "comprehensiveUniqueRequests");
         this.uniqueChassisCount = uniqueChassisCount;
         this.uniqueChassisSuccessCount = uniqueChassisSuccessCount;
         this.uniqueChassisFailCount = uniqueChassisFailCount;
@@ -112,6 +121,18 @@ public class QuoteStatistics {
 
     public QuoteGroupStats getComprehensiveStats() {
         return comprehensiveStats;
+    }
+
+    public UniqueRequestSummary getOverallUniqueRequests() {
+        return overallUniqueRequests;
+    }
+
+    public UniqueRequestSummary getTplUniqueRequests() {
+        return tplUniqueRequests;
+    }
+
+    public UniqueRequestSummary getComprehensiveUniqueRequests() {
+        return comprehensiveUniqueRequests;
     }
 
     public long getOverallTotalQuotes() {
@@ -238,11 +259,11 @@ public class QuoteStatistics {
         return uniqueChassisByBodyType;
     }
 
-    public List<CategoryCount> getManufactureYearTrend() {
+    public List<TrendPoint> getManufactureYearTrend() {
         return manufactureYearTrend;
     }
 
-    public List<CategoryCount> getCustomerAgeTrend() {
+    public List<TrendPoint> getCustomerAgeTrend() {
         return customerAgeTrend;
     }
 
@@ -428,6 +449,54 @@ public class QuoteStatistics {
 
         public long getCount() {
             return count;
+        }
+    }
+
+    public static final class TrendPoint {
+        private final String label;
+        private final long quotedCount;
+        private final long failedCount;
+
+        public TrendPoint(String label, long quotedCount, long failedCount) {
+            this.label = Objects.requireNonNull(label, "label");
+            this.quotedCount = quotedCount;
+            this.failedCount = failedCount;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public long getQuotedCount() {
+            return quotedCount;
+        }
+
+        public long getFailedCount() {
+            return failedCount;
+        }
+    }
+
+    public static final class UniqueRequestSummary {
+        private final long totalRequests;
+        private final long successCount;
+        private final long failureCount;
+
+        public UniqueRequestSummary(long totalRequests, long successCount, long failureCount) {
+            this.totalRequests = totalRequests;
+            this.successCount = successCount;
+            this.failureCount = failureCount;
+        }
+
+        public long getTotalRequests() {
+            return totalRequests;
+        }
+
+        public long getSuccessCount() {
+            return successCount;
+        }
+
+        public long getFailureCount() {
+            return failureCount;
         }
     }
 

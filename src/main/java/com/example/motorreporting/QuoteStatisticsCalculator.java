@@ -41,6 +41,9 @@ public final class QuoteStatisticsCalculator {
 
         QuoteGroupStats tplStats = buildStats(GroupType.TPL, tplRecords);
         QuoteGroupStats compStats = buildStats(GroupType.COMPREHENSIVE, compRecords);
+        QuoteStatistics.UniqueRequestSummary overallUniqueRequests = computeUniqueRequestSummary(records);
+        QuoteStatistics.UniqueRequestSummary tplUniqueRequests = computeUniqueRequestSummary(tplRecords);
+        QuoteStatistics.UniqueRequestSummary compUniqueRequests = computeUniqueRequestSummary(compRecords);
         UniqueChassisSummary uniqueChassisSummary = computeUniqueChassisSummary(records);
         UniqueChassisSummary tplUniqueChassisSummary = computeUniqueChassisSummary(tplRecords);
         UniqueChassisSummary compUniqueChassisSummary = computeUniqueChassisSummary(compRecords);
@@ -75,11 +78,14 @@ public final class QuoteStatisticsCalculator {
                 computeUniqueChassisCounts(records, QuoteRecord::getInsurancePurposeLabel);
         List<QuoteStatistics.CategoryCount> uniqueChassisByBodyType =
                 computeUniqueChassisCounts(records, QuoteRecord::getBodyCategoryLabel);
-        List<QuoteStatistics.CategoryCount> manufactureYearTrend =
+        List<QuoteStatistics.TrendPoint> manufactureYearTrend =
                 computeManufactureYearTrend(records);
-        List<QuoteStatistics.CategoryCount> customerAgeTrend =
+        List<QuoteStatistics.TrendPoint> customerAgeTrend =
                 computeCustomerAgeTrend(records);
         return new QuoteStatistics(tplStats, compStats,
+                overallUniqueRequests,
+                tplUniqueRequests,
+                compUniqueRequests,
                 uniqueChassisSummary.getTotal(),
                 uniqueChassisSummary.getSuccessCount(),
                 uniqueChassisSummary.getFailureCount(),
@@ -204,6 +210,53 @@ public final class QuoteStatisticsCalculator {
         }
 
         return new UniqueChassisSummary(uniqueValues.size(), successValues.size(), failureValues.size());
+    }
+
+    private static QuoteStatistics.UniqueRequestSummary computeUniqueRequestSummary(List<QuoteRecord> records) {
+        Set<String> uniqueKeys = new LinkedHashSet<>();
+        Set<String> successKeys = new LinkedHashSet<>();
+        Set<String> failureKeys = new LinkedHashSet<>();
+
+        for (QuoteRecord record : records) {
+            String requestKey = buildRequestKey(record);
+            uniqueKeys.add(requestKey);
+            if (record.isSuccessful()) {
+                successKeys.add(requestKey);
+            } else if (record.isFailure()) {
+                failureKeys.add(requestKey);
+            }
+        }
+
+        return new QuoteStatistics.UniqueRequestSummary(uniqueKeys.size(), successKeys.size(), failureKeys.size());
+    }
+
+    private static String buildRequestKey(QuoteRecord record) {
+        String chassis = record.getChassisNumber()
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .orElse(null);
+        String eid = record.getEid()
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .orElse(null);
+
+        if (eid != null && chassis != null) {
+            return "EID:" + eid + "::CH:" + chassis;
+        }
+        if (chassis != null) {
+            return "CHASSIS_ONLY:" + chassis;
+        }
+        if (eid != null) {
+            return "EID_ONLY:" + eid;
+        }
+        String quoteNumber = record.getQuoteNumber()
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .orElse(null);
+        if (quoteNumber != null) {
+            return "QUOTE:" + quoteNumber;
+        }
+        return "FALLBACK:" + System.identityHashCode(record);
     }
 
     private static Map<String, QuoteStatistics.OutcomeBreakdown> computeOutcomeBreakdown(
@@ -384,69 +437,67 @@ public final class QuoteStatisticsCalculator {
         return counts;
     }
 
-    private static List<QuoteStatistics.CategoryCount> computeManufactureYearTrend(List<QuoteRecord> records) {
-        Map<String, String> chassisToLabel = new LinkedHashMap<>();
+    private static List<QuoteStatistics.TrendPoint> computeManufactureYearTrend(List<QuoteRecord> records) {
+        Map<String, ManufactureYearRequest> requestByKey = new LinkedHashMap<>();
         for (QuoteRecord record : records) {
-            Optional<String> chassisOptional = record.getChassisNumber();
-            if (chassisOptional.isEmpty()) {
-                continue;
+            String requestKey = buildRequestKey(record);
+            ManufactureYearRequest request = requestByKey.computeIfAbsent(requestKey,
+                    ignored -> new ManufactureYearRequest());
+            request.record(record);
+        }
+
+        if (requestByKey.isEmpty()) {
+            return List.of(new QuoteStatistics.TrendPoint("No Data", 0, 0));
+        }
+
+        Map<String, TrendCounter> countsByLabel = new HashMap<>();
+        for (ManufactureYearRequest request : requestByKey.values()) {
+            String label = request.getLabel();
+            TrendCounter counter = countsByLabel.computeIfAbsent(label, ignored -> new TrendCounter());
+            counter.incrementTotal();
+            if (request.hasFailure()) {
+                counter.incrementFailed();
             }
-            String chassis = chassisOptional.get();
-            String label = record.getManufactureYear()
-                    .map(String::valueOf)
-                    .orElse("Unknown");
-            String existing = chassisToLabel.get(chassis);
-            if (existing == null || ("Unknown".equals(existing) && !"Unknown".equals(label))) {
-                chassisToLabel.put(chassis, label);
-            }
         }
 
-        if (chassisToLabel.isEmpty()) {
-            return List.of(new QuoteStatistics.CategoryCount("No Data", 0));
-        }
-
-        Map<String, Long> counts = new HashMap<>();
-        for (String label : chassisToLabel.values()) {
-            counts.merge(label, 1L, Long::sum);
-        }
-
-        return counts.entrySet().stream()
+        return countsByLabel.entrySet().stream()
                 .sorted(Comparator
                         .comparingInt(entry -> yearOrderKey(entry.getKey()))
                         .thenComparing(Map.Entry::getKey))
-                .map(entry -> new QuoteStatistics.CategoryCount(entry.getKey(), entry.getValue()))
+                .map(entry -> new QuoteStatistics.TrendPoint(entry.getKey(),
+                        entry.getValue().getTotal(), entry.getValue().getFailed()))
                 .collect(Collectors.toList());
     }
 
-    private static List<QuoteStatistics.CategoryCount> computeCustomerAgeTrend(List<QuoteRecord> records) {
-        Map<String, Integer> ageByEid = new LinkedHashMap<>();
+    private static List<QuoteStatistics.TrendPoint> computeCustomerAgeTrend(List<QuoteRecord> records) {
+        Map<String, CustomerAgeRequest> requestByKey = new LinkedHashMap<>();
         for (QuoteRecord record : records) {
-            Optional<String> eidOptional = record.getEid();
-            if (eidOptional.isEmpty()) {
-                continue;
+            String requestKey = buildRequestKey(record);
+            CustomerAgeRequest request = requestByKey.computeIfAbsent(requestKey,
+                    ignored -> new CustomerAgeRequest());
+            request.record(record);
+        }
+
+        if (requestByKey.isEmpty()) {
+            return List.of(new QuoteStatistics.TrendPoint("No Data", 0, 0));
+        }
+
+        Map<String, TrendCounter> countsByLabel = new HashMap<>();
+        for (CustomerAgeRequest request : requestByKey.values()) {
+            String label = request.getLabel();
+            TrendCounter counter = countsByLabel.computeIfAbsent(label, ignored -> new TrendCounter());
+            counter.incrementTotal();
+            if (request.hasFailure()) {
+                counter.incrementFailed();
             }
-            String eid = eidOptional.get();
-            Integer ageValue = record.getDriverAge().filter(age -> age > 0).orElse(null);
-            if (!ageByEid.containsKey(eid) || (ageByEid.get(eid) == null && ageValue != null)) {
-                ageByEid.put(eid, ageValue);
-            }
         }
 
-        if (ageByEid.isEmpty()) {
-            return List.of(new QuoteStatistics.CategoryCount("No Data", 0));
-        }
-
-        Map<String, Long> counts = new HashMap<>();
-        for (Integer age : ageByEid.values()) {
-            String label = age != null ? String.valueOf(age) : "Unknown";
-            counts.merge(label, 1L, Long::sum);
-        }
-
-        return counts.entrySet().stream()
+        return countsByLabel.entrySet().stream()
                 .sorted(Comparator
                         .comparingInt(entry -> ageOrderKey(entry.getKey()))
                         .thenComparing(Map.Entry::getKey))
-                .map(entry -> new QuoteStatistics.CategoryCount(entry.getKey(), entry.getValue()))
+                .map(entry -> new QuoteStatistics.TrendPoint(entry.getKey(),
+                        entry.getValue().getTotal(), entry.getValue().getFailed()))
                 .collect(Collectors.toList());
     }
 
@@ -728,6 +779,78 @@ public final class QuoteStatisticsCalculator {
             new ValueRange(400_000, 449_999),
             new ValueRange(450_000, 500_000)
     );
+
+    private static final class ManufactureYearRequest {
+        private String label;
+        private boolean failure;
+
+        private void record(QuoteRecord record) {
+            String candidate = record.getManufactureYear()
+                    .map(String::valueOf)
+                    .orElse("Unknown");
+            if (label == null || ("Unknown".equals(label) && !"Unknown".equals(candidate))) {
+                label = candidate;
+            }
+            if (record.isFailure()) {
+                failure = true;
+            }
+        }
+
+        private String getLabel() {
+            return label == null ? "Unknown" : label;
+        }
+
+        private boolean hasFailure() {
+            return failure;
+        }
+    }
+
+    private static final class CustomerAgeRequest {
+        private String label;
+        private boolean failure;
+
+        private void record(QuoteRecord record) {
+            Integer ageValue = record.getDriverAge()
+                    .filter(age -> age > 0)
+                    .orElse(null);
+            String candidate = ageValue != null ? String.valueOf(ageValue) : "Unknown";
+            if (label == null || ("Unknown".equals(label) && !"Unknown".equals(candidate))) {
+                label = candidate;
+            }
+            if (record.isFailure()) {
+                failure = true;
+            }
+        }
+
+        private String getLabel() {
+            return label == null ? "Unknown" : label;
+        }
+
+        private boolean hasFailure() {
+            return failure;
+        }
+    }
+
+    private static final class TrendCounter {
+        private long total;
+        private long failed;
+
+        private void incrementTotal() {
+            total++;
+        }
+
+        private void incrementFailed() {
+            failed++;
+        }
+
+        private long getTotal() {
+            return total;
+        }
+
+        private long getFailed() {
+            return failed;
+        }
+    }
 
     private static final class AgeRange {
         private final int startInclusive;
