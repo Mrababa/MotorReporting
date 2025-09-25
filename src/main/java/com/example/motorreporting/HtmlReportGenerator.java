@@ -65,17 +65,17 @@ public class HtmlReportGenerator {
                              ReportDateRange reportDateRange) {
         QuoteGroupStats tplStats = statistics.getTplStats();
         QuoteGroupStats compStats = statistics.getComprehensiveStats();
+        QuoteStatistics.UniqueRequestSummary overallUniqueRequests = statistics.getOverallUniqueRequests();
         Map<String, QuoteStatistics.OutcomeBreakdown> tplSpecificationSummary =
                 aggregateSpecificationOutcomes(statistics.getTplSpecificationOutcomes());
         Map<String, QuoteStatistics.OutcomeBreakdown> compSpecificationSummary =
                 aggregateSpecificationOutcomes(statistics.getComprehensiveSpecificationOutcomes());
 
-        long totalQuotes = statistics.getOverallTotalQuotes();
-        long successCount = statistics.getOverallPassCount();
-        long failCount = statistics.getOverallFailCount();
+        long totalQuotes = overallUniqueRequests.getTotalRequests();
+        long successCount = overallUniqueRequests.getSuccessCount();
+        long failCount = overallUniqueRequests.getFailureCount();
+        long uniqueCasesCount = overallUniqueRequests.getTotalRequests();
         long uniqueChassisTotal = statistics.getUniqueChassisCount();
-        long uniqueChassisSuccess = statistics.getUniqueChassisSuccessCount();
-        long uniqueChassisFail = statistics.getUniqueChassisFailCount();
         QuoteStatistics.EidChassisSummary tplEidChassisSummary = statistics.getTplEidChassisSummary();
         long tplEidChassisTotal = tplEidChassisSummary.getTotalRequests();
         long tplEidChassisUnique = tplEidChassisSummary.getUniqueRequests();
@@ -223,6 +223,41 @@ public class HtmlReportGenerator {
         html.append("            font-weight: 700;\n");
         html.append("            color: #0d1b3e;\n");
         html.append("        }\n");
+        html.append("        .chart-card__header {\n");
+        html.append("            display: flex;\n");
+        html.append("            align-items: center;\n");
+        html.append("            justify-content: space-between;\n");
+        html.append("            gap: 1rem;\n");
+        html.append("            margin-bottom: 1rem;\n");
+        html.append("        }\n");
+        html.append("        .chart-card__header h2 {\n");
+        html.append("            margin: 0;\n");
+        html.append("        }\n");
+        html.append("        .chart-toggle {\n");
+        html.append("            display: inline-flex;\n");
+        html.append("            background-color: #e5e7eb;\n");
+        html.append("            border-radius: 9999px;\n");
+        html.append("            padding: 0.25rem;\n");
+        html.append("        }\n");
+        html.append("        .chart-toggle__button {\n");
+        html.append("            border: none;\n");
+        html.append("            background: transparent;\n");
+        html.append("            padding: 0.35rem 0.9rem;\n");
+        html.append("            border-radius: 9999px;\n");
+        html.append("            font-size: 0.85rem;\n");
+        html.append("            font-weight: 600;\n");
+        html.append("            color: #1f2937;\n");
+        html.append("            cursor: pointer;\n");
+        html.append("            transition: background-color 0.2s ease, color 0.2s ease;\n");
+        html.append("        }\n");
+        html.append("        .chart-toggle__button.active {\n");
+        html.append("            background-color: #2563eb;\n");
+        html.append("            color: #ffffff;\n");
+        html.append("        }\n");
+        html.append("        .chart-toggle__button:focus-visible {\n");
+        html.append("            outline: 2px solid #1d4ed8;\n");
+        html.append("            outline-offset: 2px;\n");
+        html.append("        }\n");
         html.append("        .page-nav {\n");
         html.append("            display: flex;\n");
         html.append("            justify-content: center;\n");
@@ -342,14 +377,8 @@ public class HtmlReportGenerator {
         appendSummaryCard(html, "Total Quotes Requested", totalQuotes, "#2563eb");
         appendSummaryCard(html, "Successful Quotes", successCount, "#16a34a");
         appendSummaryCard(html, "Failed Quotes", failCount, "#dc2626");
-        html.append("    </div>\n");
-        html.append("    <div class=\"summary-section\">\n");
-        html.append("      <h2 class=\"section-title\">Unique Chassis Overview</h2>\n");
-        html.append("      <div class=\"summary-grid\">\n");
-        appendSummaryCard(html, "Unique Chassis Requested", uniqueChassisTotal, "#2563eb");
-        appendSummaryCard(html, "Unique Chassis Success", uniqueChassisSuccess, "#16a34a");
-        appendSummaryCard(html, "Unique Chassis Failed", uniqueChassisFail, "#dc2626");
-        html.append("      </div>\n");
+        appendSummaryCard(html, "Unique Cases Count (EID + Chassis)", uniqueCasesCount, "#7c3aed");
+        appendSummaryCard(html, "Unique Chassis Requested", uniqueChassisTotal, "#0891b2");
         html.append("    </div>\n");
         html.append("    <div class=\"charts\">\n");
         html.append("      <div class=\"chart-grid\">\n");
@@ -362,11 +391,23 @@ public class HtmlReportGenerator {
         html.append("          <canvas id=\"compOutcomesChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("        <div class=\"chart-card chart-card--wide\">\n");
-        html.append("          <h2>Manufacture Year Trend</h2>\n");
+        html.append("          <div class=\"chart-card__header\">\n");
+        html.append("            <h2>Manufacture Year Trend</h2>\n");
+        html.append("            <div class=\"chart-toggle\" data-chart-toggle=\"overallManufactureYearChart\">\n");
+        html.append("              <button type=\"button\" class=\"chart-toggle__button active\" data-series=\"quoted\">Quoted</button>\n");
+        html.append("              <button type=\"button\" class=\"chart-toggle__button\" data-series=\"failed\">Failed</button>\n");
+        html.append("            </div>\n");
+        html.append("          </div>\n");
         html.append("          <canvas id=\"overallManufactureYearChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("        <div class=\"chart-card chart-card--wide\">\n");
-        html.append("          <h2>Customer Age Trend</h2>\n");
+        html.append("          <div class=\"chart-card__header\">\n");
+        html.append("            <h2>Customer Age Trend</h2>\n");
+        html.append("            <div class=\"chart-toggle\" data-chart-toggle=\"overallCustomerAgeChart\">\n");
+        html.append("              <button type=\"button\" class=\"chart-toggle__button active\" data-series=\"quoted\">Quoted</button>\n");
+        html.append("              <button type=\"button\" class=\"chart-toggle__button\" data-series=\"failed\">Failed</button>\n");
+        html.append("            </div>\n");
+        html.append("          </div>\n");
         html.append("          <canvas id=\"overallCustomerAgeChart\"></canvas>\n");
         html.append("        </div>\n");
         html.append("      </div>\n");
@@ -946,9 +987,15 @@ public class HtmlReportGenerator {
                                 Map<String, QuoteStatistics.OutcomeBreakdown> compSpecSummary) {
         QuoteGroupStats tplStats = statistics.getTplStats();
         QuoteGroupStats compStats = statistics.getComprehensiveStats();
+        QuoteStatistics.UniqueRequestSummary tplUniqueRequests = statistics.getTplUniqueRequests();
+        QuoteStatistics.UniqueRequestSummary compUniqueRequests = statistics.getComprehensiveUniqueRequests();
         QuoteStatistics.EidChassisSummary tplEidChassisSummary = statistics.getTplEidChassisSummary();
         long tplEidChassisTotal = tplEidChassisSummary.getTotalRequests();
         long tplEidChassisUnique = tplEidChassisSummary.getUniqueRequests();
+        long tplUniqueSuccessCount = tplUniqueRequests.getSuccessCount();
+        long tplUniqueFailureCount = tplUniqueRequests.getFailureCount();
+        long compUniqueSuccessCount = compUniqueRequests.getSuccessCount();
+        long compUniqueFailureCount = compUniqueRequests.getFailureCount();
 
         Map<String, QuoteStatistics.OutcomeBreakdown> tplBodyOutcomes = statistics.getTplBodyCategoryOutcomes();
         Map<String, QuoteStatistics.OutcomeBreakdown> compBodyOutcomes = statistics.getComprehensiveBodyCategoryOutcomes();
@@ -959,8 +1006,8 @@ public class HtmlReportGenerator {
         List<QuoteStatistics.ManufactureYearStats> compManufactureYearStats =
                 statistics.getComprehensiveManufactureYearStats();
         List<QuoteStatistics.ValueRangeStats> compValueStats = statistics.getComprehensiveEstimatedValueStats();
-        List<QuoteStatistics.CategoryCount> overallManufactureYearTrend = statistics.getManufactureYearTrend();
-        List<QuoteStatistics.CategoryCount> overallCustomerAgeTrend = statistics.getCustomerAgeTrend();
+        List<QuoteStatistics.TrendPoint> overallManufactureYearTrend = statistics.getManufactureYearTrend();
+        List<QuoteStatistics.TrendPoint> overallCustomerAgeTrend = statistics.getCustomerAgeTrend();
 
         QuoteStatistics.OutcomeBreakdown tplGccBreakdown =
                 tplSpecSummary.getOrDefault(SPEC_GCC_LABEL, EMPTY_OUTCOME);
@@ -1087,26 +1134,32 @@ public class HtmlReportGenerator {
         }
 
         List<String> overallManufactureYearLabels = new ArrayList<>();
-        List<Long> overallManufactureYearCounts = new ArrayList<>();
+        List<Long> overallManufactureYearQuotedCounts = new ArrayList<>();
+        List<Long> overallManufactureYearFailedCounts = new ArrayList<>();
         if (overallManufactureYearTrend.isEmpty()) {
             overallManufactureYearLabels.add("No Data");
-            overallManufactureYearCounts.add(0L);
+            overallManufactureYearQuotedCounts.add(0L);
+            overallManufactureYearFailedCounts.add(0L);
         } else {
-            for (QuoteStatistics.CategoryCount point : overallManufactureYearTrend) {
+            for (QuoteStatistics.TrendPoint point : overallManufactureYearTrend) {
                 overallManufactureYearLabels.add(point.getLabel());
-                overallManufactureYearCounts.add(point.getCount());
+                overallManufactureYearQuotedCounts.add(point.getQuotedCount());
+                overallManufactureYearFailedCounts.add(point.getFailedCount());
             }
         }
 
         List<String> overallCustomerAgeLabels = new ArrayList<>();
-        List<Long> overallCustomerAgeCounts = new ArrayList<>();
+        List<Long> overallCustomerAgeQuotedCounts = new ArrayList<>();
+        List<Long> overallCustomerAgeFailedCounts = new ArrayList<>();
         if (overallCustomerAgeTrend.isEmpty()) {
             overallCustomerAgeLabels.add("No Data");
-            overallCustomerAgeCounts.add(0L);
+            overallCustomerAgeQuotedCounts.add(0L);
+            overallCustomerAgeFailedCounts.add(0L);
         } else {
-            for (QuoteStatistics.CategoryCount point : overallCustomerAgeTrend) {
+            for (QuoteStatistics.TrendPoint point : overallCustomerAgeTrend) {
                 overallCustomerAgeLabels.add(point.getLabel());
-                overallCustomerAgeCounts.add(point.getCount());
+                overallCustomerAgeQuotedCounts.add(point.getQuotedCount());
+                overallCustomerAgeFailedCounts.add(point.getFailedCount());
             }
         }
 
@@ -1138,11 +1191,34 @@ public class HtmlReportGenerator {
         script.append("    scales: { y: { beginAtZero: true, ticks: { callback: value => value.toLocaleString() } } },\n");
         script.append("    plugins: { tooltip: { callbacks: { label: ctx => `${ctx.dataset.label}: ${ctx.raw.toLocaleString()}` } } }\n");
         script.append("  };\n");
+        script.append("  const cloneDataset = dataset => ({\n");
+        script.append("    ...dataset,\n");
+        script.append("    data: Array.isArray(dataset.data) ? [...dataset.data] : dataset.data\n");
+        script.append("  });\n");
+        script.append("  const registerChartToggle = (toggleId, chart, seriesMap) => {\n");
+        script.append("    const toggleElement = document.querySelector(`[data-chart-toggle=\\"${toggleId}\\"]`);\n");
+        script.append("    if (!toggleElement) {\n");
+        script.append("      return;\n");
+        script.append("    }\n");
+        script.append("    const buttons = Array.from(toggleElement.querySelectorAll('button[data-series]'));\n");
+        script.append("    buttons.forEach(button => {\n");
+        script.append("      button.addEventListener('click', () => {\n");
+        script.append("        const key = button.getAttribute('data-series');\n");
+        script.append("        const dataset = seriesMap[key];\n");
+        script.append("        if (!dataset) {\n");
+        script.append("          return;\n");
+        script.append("        }\n");
+        script.append("        chart.data.datasets = [cloneDataset(dataset)];\n");
+        script.append("        chart.update();\n");
+        script.append("        buttons.forEach(btn => btn.classList.toggle('active', btn === button));\n");
+        script.append("      });\n");
+        script.append("    });\n");
+        script.append("  };\n");
         script.append("  const tplData = {\n");
         script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Quotes',\n");
-        script.append("      data: [").append(tplStats.getPassCount()).append(',').append(tplStats.getFailCount()).append("],\n");
+        script.append("      data: [").append(tplUniqueSuccessCount).append(',').append(tplUniqueFailureCount).append("],\n");
         script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
@@ -1151,32 +1227,46 @@ public class HtmlReportGenerator {
         script.append("    labels: ['Success', 'Failed'],\n");
         script.append("    datasets: [{\n");
         script.append("      label: 'Quotes',\n");
-        script.append("      data: [").append(compStats.getPassCount()).append(',').append(compStats.getFailCount()).append("],\n");
+        script.append("      data: [").append(compUniqueSuccessCount).append(',').append(compUniqueFailureCount).append("],\n");
         script.append("      backgroundColor: ['#16a34a', '#dc2626'],\n");
         script.append("      borderRadius: 8\n");
         script.append("    }]\n");
         script.append("  };\n");
-        script.append("  const overallManufactureYearData = {\n");
-        script.append("    labels: ").append(toJsStringArray(overallManufactureYearLabels)).append(",\n");
-        script.append("    datasets: [{\n");
-        script.append("      label: 'Quotes',\n");
-        script.append("      data: ").append(toJsNumberArray(overallManufactureYearCounts)).append(",\n");
+        script.append("  const overallManufactureYearSeries = {\n");
+        script.append("    quoted: {\n");
+        script.append("      label: 'Quoted',\n");
+        script.append("      data: ").append(toJsNumberArray(overallManufactureYearQuotedCounts)).append(",\n");
         script.append("      borderColor: '#2563eb',\n");
         script.append("      backgroundColor: 'rgba(37, 99, 235, 0.15)',\n");
         script.append("      tension: 0.35,\n");
         script.append("      fill: true\n");
-        script.append("    }]\n");
+        script.append("    },\n");
+        script.append("    failed: {\n");
+        script.append("      label: 'Failed',\n");
+        script.append("      data: ").append(toJsNumberArray(overallManufactureYearFailedCounts)).append(",\n");
+        script.append("      borderColor: '#dc2626',\n");
+        script.append("      backgroundColor: 'rgba(220, 38, 38, 0.15)',\n");
+        script.append("      tension: 0.35,\n");
+        script.append("      fill: true\n");
+        script.append("    }\n");
         script.append("  };\n");
-        script.append("  const overallCustomerAgeData = {\n");
-        script.append("    labels: ").append(toJsStringArray(overallCustomerAgeLabels)).append(",\n");
-        script.append("    datasets: [{\n");
-        script.append("      label: 'Quotes',\n");
-        script.append("      data: ").append(toJsNumberArray(overallCustomerAgeCounts)).append(",\n");
+        script.append("  const overallCustomerAgeSeries = {\n");
+        script.append("    quoted: {\n");
+        script.append("      label: 'Quoted',\n");
+        script.append("      data: ").append(toJsNumberArray(overallCustomerAgeQuotedCounts)).append(",\n");
         script.append("      borderColor: '#f97316',\n");
         script.append("      backgroundColor: 'rgba(249, 115, 22, 0.15)',\n");
         script.append("      tension: 0.35,\n");
         script.append("      fill: true\n");
-        script.append("    }]\n");
+        script.append("    },\n");
+        script.append("    failed: {\n");
+        script.append("      label: 'Failed',\n");
+        script.append("      data: ").append(toJsNumberArray(overallCustomerAgeFailedCounts)).append(",\n");
+        script.append("      borderColor: '#dc2626',\n");
+        script.append("      backgroundColor: 'rgba(220, 38, 38, 0.15)',\n");
+        script.append("      tension: 0.35,\n");
+        script.append("      fill: true\n");
+        script.append("    }\n");
         script.append("  };\n");
         script.append("  const tplEidChassisDedupData = {\n");
         script.append("    labels: ['Total Requests', 'Unique Requests'],\n");
@@ -1402,16 +1492,24 @@ public class HtmlReportGenerator {
         script.append("    data: compEstimatedValueData,\n");
         script.append("    options: ratioChartOptions\n");
         script.append("  });\n");
-        script.append("  new Chart(document.getElementById('overallManufactureYearChart'), {\n");
+        script.append("  const overallManufactureYearChart = new Chart(document.getElementById('overallManufactureYearChart'), {\n");
         script.append("    type: 'line',\n");
-        script.append("    data: overallManufactureYearData,\n");
+        script.append("    data: {\n");
+        script.append("      labels: ").append(toJsStringArray(overallManufactureYearLabels)).append(",\n");
+        script.append("      datasets: [cloneDataset(overallManufactureYearSeries.quoted)]\n");
+        script.append("    },\n");
         script.append("    options: trendLineOptions\n");
         script.append("  });\n");
-        script.append("  new Chart(document.getElementById('overallCustomerAgeChart'), {\n");
+        script.append("  registerChartToggle('overallManufactureYearChart', overallManufactureYearChart, overallManufactureYearSeries);\n");
+        script.append("  const overallCustomerAgeChart = new Chart(document.getElementById('overallCustomerAgeChart'), {\n");
         script.append("    type: 'line',\n");
-        script.append("    data: overallCustomerAgeData,\n");
+        script.append("    data: {\n");
+        script.append("      labels: ").append(toJsStringArray(overallCustomerAgeLabels)).append(",\n");
+        script.append("      datasets: [cloneDataset(overallCustomerAgeSeries.quoted)]\n");
+        script.append("    },\n");
         script.append("    options: trendLineOptions\n");
         script.append("  });\n");
+        script.append("  registerChartToggle('overallCustomerAgeChart', overallCustomerAgeChart, overallCustomerAgeSeries);\n");
         script.append("  document.querySelectorAll('.nav-button').forEach(button => {\n");
         script.append("    button.addEventListener('click', () => {\n");
         script.append("      document.querySelectorAll('.nav-button').forEach(btn => btn.classList.remove('active'));\n");
