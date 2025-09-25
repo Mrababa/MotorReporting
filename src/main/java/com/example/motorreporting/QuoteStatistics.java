@@ -43,8 +43,12 @@ public class QuoteStatistics {
     private final List<ValueRangeStats> comprehensiveEstimatedValueStats;
     private final List<SalesConversionStats> tplSalesByBodyType;
     private final List<SalesConversionStats> tplSalesByAgeRange;
+    private final List<SalesConversionStats> tplSalesByChineseClassification;
+    private final List<SalesConversionStats> tplSalesByFuelType;
     private final List<SalesConversionStats> comprehensiveSalesByBodyType;
     private final List<SalesConversionStats> comprehensiveSalesByAgeRange;
+    private final List<SalesConversionStats> comprehensiveSalesByChineseClassification;
+    private final List<SalesConversionStats> comprehensiveSalesByFuelType;
     private final List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis;
     private final List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis;
@@ -85,8 +89,12 @@ public class QuoteStatistics {
                            List<ValueRangeStats> comprehensiveEstimatedValueStats,
                            List<SalesConversionStats> tplSalesByBodyType,
                            List<SalesConversionStats> tplSalesByAgeRange,
+                           List<SalesConversionStats> tplSalesByChineseClassification,
+                           List<SalesConversionStats> tplSalesByFuelType,
                            List<SalesConversionStats> comprehensiveSalesByBodyType,
                            List<SalesConversionStats> comprehensiveSalesByAgeRange,
+                           List<SalesConversionStats> comprehensiveSalesByChineseClassification,
+                           List<SalesConversionStats> comprehensiveSalesByFuelType,
                            List<ModelChassisSummary> tplTopRejectedModelsByUniqueChassis,
                            List<MakeModelChassisSummary> topRequestedMakeModelsByUniqueChassis,
                            List<MakeModelChassisSummary> tplTopRequestedMakeModelsByUniqueChassis,
@@ -126,8 +134,13 @@ public class QuoteStatistics {
         this.comprehensiveEstimatedValueStats = immutableCopy(comprehensiveEstimatedValueStats);
         this.tplSalesByBodyType = immutableCopy(tplSalesByBodyType);
         this.tplSalesByAgeRange = immutableCopy(tplSalesByAgeRange);
+        this.tplSalesByChineseClassification = immutableCopy(tplSalesByChineseClassification);
+        this.tplSalesByFuelType = immutableCopy(tplSalesByFuelType);
         this.comprehensiveSalesByBodyType = immutableCopy(comprehensiveSalesByBodyType);
         this.comprehensiveSalesByAgeRange = immutableCopy(comprehensiveSalesByAgeRange);
+        this.comprehensiveSalesByChineseClassification =
+                immutableCopy(comprehensiveSalesByChineseClassification);
+        this.comprehensiveSalesByFuelType = immutableCopy(comprehensiveSalesByFuelType);
         this.tplTopRejectedModelsByUniqueChassis = immutableCopy(tplTopRejectedModelsByUniqueChassis);
         this.topRequestedMakeModelsByUniqueChassis = immutableCopy(topRequestedMakeModelsByUniqueChassis);
         this.tplTopRequestedMakeModelsByUniqueChassis = immutableCopy(tplTopRequestedMakeModelsByUniqueChassis);
@@ -288,12 +301,28 @@ public class QuoteStatistics {
         return tplSalesByAgeRange;
     }
 
+    public List<SalesConversionStats> getTplSalesByChineseClassification() {
+        return tplSalesByChineseClassification;
+    }
+
+    public List<SalesConversionStats> getTplSalesByFuelType() {
+        return tplSalesByFuelType;
+    }
+
     public List<SalesConversionStats> getComprehensiveSalesByBodyType() {
         return comprehensiveSalesByBodyType;
     }
 
     public List<SalesConversionStats> getComprehensiveSalesByAgeRange() {
         return comprehensiveSalesByAgeRange;
+    }
+
+    public List<SalesConversionStats> getComprehensiveSalesByChineseClassification() {
+        return comprehensiveSalesByChineseClassification;
+    }
+
+    public List<SalesConversionStats> getComprehensiveSalesByFuelType() {
+        return comprehensiveSalesByFuelType;
     }
 
     public List<ValueRangeStats> getComprehensiveEstimatedValueStats() {
