@@ -123,8 +123,8 @@ public class QuoteRecord {
         LocalDateTime quoteRequestedOn = parseQuoteRequestedOn(getValueIgnoreCase(normalized, "QuoteRequestedOn"));
 
         return new QuoteRecord(normalized, insuranceType, status, insurancePurpose, insuranceCompanyName, errorText,
-                manufactureYear, estimatedValue, quoteNumber, policyNumber, chassisNumber, eid, outcome, bodyCategory, overrideSpec,
-                driverAge, model, make, quoteRequestedOn, policyPremium);
+                manufactureYear, estimatedValue, quoteNumber, policyNumber, chassisNumber, policyPremium, eid, outcome,
+                bodyCategory, overrideSpec, driverAge, model, make, quoteRequestedOn);
     }
 
     private static String getValueIgnoreCase(Map<String, String> values, String key) {
