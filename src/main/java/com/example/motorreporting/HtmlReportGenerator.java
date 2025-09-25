@@ -100,6 +100,8 @@ public class HtmlReportGenerator {
                 statistics.getTplBodyTypePremiums();
         List<QuoteStatistics.MakeModelPremiumSummary> tplTopModelsByPremium =
                 statistics.getTplTopModelsByPremium();
+        List<QuoteStatistics.SalesConversionStats> tplSalesByBody =
+                statistics.getTplSalesByBodyType();
         long compPoliciesSold = statistics.getComprehensivePoliciesSold();
         BigDecimal compTotalPremium = statistics.getComprehensiveTotalPremium();
         double compChineseSalesRatio = statistics.getComprehensiveChineseSalesRatio();
@@ -108,6 +110,8 @@ public class HtmlReportGenerator {
                 statistics.getComprehensiveBodyTypePremiums();
         List<QuoteStatistics.MakeModelPremiumSummary> compTopModelsByPremium =
                 statistics.getComprehensiveTopModelsByPremium();
+        List<QuoteStatistics.SalesConversionStats> compSalesByBody =
+                statistics.getComprehensiveSalesByBodyType();
 
         StringBuilder html = new StringBuilder();
         html.append("<!DOCTYPE html>\n");
