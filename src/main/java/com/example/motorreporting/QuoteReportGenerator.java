@@ -137,8 +137,8 @@ public final class QuoteReportGenerator {
                     .sorted()
                     .collect(Collectors.joining(", "));
             throw new IllegalArgumentException("Multiple data files found in source data directory: "
-                    + sourceDirectory.toAbsolutePath() + " (" + availableFiles
-                    + "). Please specify which file to use.");
+                    + sourceDirectory.toAbsolutePath()
+                    + ". Please specify which file to use. Candidate files: " + availableFiles);
         }
         return candidates.get(0);
     }

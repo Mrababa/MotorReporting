@@ -31,6 +31,45 @@ public final class QuoteStatisticsCalculator {
     private static final int TOP_REJECTED_MODEL_LIMIT = 10;
     private static final int TOP_REQUESTED_MAKE_MODEL_LIMIT = 20;
 
+    private static String normalizeChassisNumber(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.toUpperCase(Locale.ROOT);
+    }
+
+    private static String normalizeEid(String value) {
+        if (value == null) {
+            return null;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < value.length(); i++) {
+            char ch = value.charAt(i);
+            if (Character.isLetterOrDigit(ch)) {
+                builder.append(Character.toUpperCase(ch));
+            }
+        }
+        if (builder.length() == 0) {
+            return null;
+        }
+        return builder.toString();
+    }
+
+    private static String normalizeSimpleIdentifier(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        return trimmed.toUpperCase(Locale.ROOT);
+    }
+
     public static QuoteStatistics calculate(List<QuoteRecord> records) {
         Objects.requireNonNull(records, "records");
 
@@ -122,13 +161,13 @@ public final class QuoteStatisticsCalculator {
         Set<String> uniqueKeys = new LinkedHashSet<>();
 
         for (QuoteRecord record : records) {
-            Optional<String> eid = record.getEid();
-            Optional<String> chassis = record.getChassisNumber();
-            if (eid.isEmpty() || chassis.isEmpty()) {
+            String normalizedEid = normalizeEid(record.getEid().orElse(null));
+            String normalizedChassis = normalizeChassisNumber(record.getChassisNumber().orElse(null));
+            if (normalizedEid == null || normalizedChassis == null) {
                 continue;
             }
             total++;
-            uniqueKeys.add(eid.get() + "::" + chassis.get());
+            uniqueKeys.add(normalizedEid + "::" + normalizedChassis);
         }
 
         long unique = uniqueKeys.size();
@@ -201,14 +240,16 @@ public final class QuoteStatisticsCalculator {
         Set<String> failureValues = new LinkedHashSet<>();
 
         for (QuoteRecord record : records) {
-            record.getChassisNumber().ifPresent(chassis -> {
-                uniqueValues.add(chassis);
-                if (record.isSuccessful()) {
-                    successValues.add(chassis);
-                } else if (record.isFailure()) {
-                    failureValues.add(chassis);
-                }
-            });
+            String chassis = normalizeChassisNumber(record.getChassisNumber().orElse(null));
+            if (chassis == null) {
+                continue;
+            }
+            uniqueValues.add(chassis);
+            if (record.isSuccessful()) {
+                successValues.add(chassis);
+            } else if (record.isFailure()) {
+                failureValues.add(chassis);
+            }
         }
 
         return new UniqueChassisSummary(uniqueValues.size(), successValues.size(), failureValues.size());
@@ -233,14 +274,8 @@ public final class QuoteStatisticsCalculator {
     }
 
     private static String buildRequestKey(QuoteRecord record) {
-        String chassis = record.getChassisNumber()
-                .map(String::trim)
-                .filter(value -> !value.isEmpty())
-                .orElse(null);
-        String eid = record.getEid()
-                .map(String::trim)
-                .filter(value -> !value.isEmpty())
-                .orElse(null);
+        String chassis = normalizeChassisNumber(record.getChassisNumber().orElse(null));
+        String eid = normalizeEid(record.getEid().orElse(null));
 
         if (eid != null && chassis != null) {
             return "EID:" + eid + "::CH:" + chassis;
@@ -251,10 +286,7 @@ public final class QuoteStatisticsCalculator {
         if (eid != null) {
             return "EID_ONLY:" + eid;
         }
-        String quoteNumber = record.getQuoteNumber()
-                .map(String::trim)
-                .filter(value -> !value.isEmpty())
-                .orElse(null);
+        String quoteNumber = normalizeSimpleIdentifier(record.getQuoteNumber().orElse(null));
         if (quoteNumber != null) {
             return "QUOTE:" + quoteNumber;
         }
@@ -363,8 +395,8 @@ public final class QuoteStatisticsCalculator {
                 continue;
             }
             String model = modelOptional.get();
-            String chassisNumber = chassisOptional.get();
-            if (model.isBlank() || chassisNumber.isBlank()) {
+            String chassisNumber = normalizeChassisNumber(chassisOptional.get());
+            if (model.isBlank() || chassisNumber == null) {
                 continue;
             }
             Set<String> uniqueChassis = chassisByModel.computeIfAbsent(model, key -> new LinkedHashSet<>());
@@ -387,14 +419,14 @@ public final class QuoteStatisticsCalculator {
         }
         Map<MakeModelKey, MakeModelChassisAccumulator> accumulatorByMakeModel = new HashMap<>();
         for (QuoteRecord record : records) {
-            Optional<String> chassisOptional = record.getChassisNumber();
-            if (chassisOptional.isEmpty()) {
+            String chassis = normalizeChassisNumber(record.getChassisNumber().orElse(null));
+            if (chassis == null) {
                 continue;
             }
             MakeModelKey key = new MakeModelKey(record.getMakeLabel(), record.getModelLabel());
             MakeModelChassisAccumulator accumulator =
                     accumulatorByMakeModel.computeIfAbsent(key, ignored -> new MakeModelChassisAccumulator());
-            accumulator.record(chassisOptional.get(), record.isSuccessful(), record.isFailure());
+            accumulator.record(chassis, record.isSuccessful(), record.isFailure());
         }
 
         List<QuoteStatistics.MakeModelChassisSummary> results = accumulatorByMakeModel.entrySet().stream()
@@ -418,8 +450,8 @@ public final class QuoteStatisticsCalculator {
         List<QuoteStatistics.CategoryCount> counts = new ArrayList<>();
         Map<String, Set<String>> uniqueChassis = new HashMap<>();
         for (QuoteRecord record : records) {
-            Optional<String> chassisOptional = record.getChassisNumber();
-            if (chassisOptional.isEmpty()) {
+            String chassisNumber = normalizeChassisNumber(record.getChassisNumber().orElse(null));
+            if (chassisNumber == null) {
                 continue;
             }
             String label = classifier.apply(record);
@@ -427,7 +459,7 @@ public final class QuoteStatisticsCalculator {
                 label = "Unknown";
             }
             Set<String> chassis = uniqueChassis.computeIfAbsent(label, ignored -> new LinkedHashSet<>());
-            chassis.add(chassisOptional.get());
+            chassis.add(chassisNumber);
         }
         for (Map.Entry<String, Set<String>> entry : uniqueChassis.entrySet()) {
             counts.add(new QuoteStatistics.CategoryCount(entry.getKey(), entry.getValue().size()));
